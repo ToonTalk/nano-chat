@@ -1624,9 +1624,10 @@ function showSettings() {
     voiceBox,
     el('label', { for: 'coachMode', style: 'margin-top:18px' }, 'Coach (optional)'),
     el('p', { class: 'sub' }, 'A stronger AI can look over Nano’s shoulder. It rates a reply, asks what you think first, and explains what went wrong and what to try. It never joins the chat: Nano does not see what the coach says.'),
+    el('p', { class: 'sub', id: 'coachLeaves' }, el('strong', null, 'Switching the coach on sends data out of this app. '), 'Each reply it reviews goes to the company you choose, together with your message, the few messages before it, and what the tools found. While the coach is off, none of that is sent.'),
     el('select', { id: 'coachMode', onchange: e => { co.mode = e.target.value; saveCoach(); drawCoach(); } }, [['off', 'Off'], ['ask', 'Only when I ask, with a button under a reply'], ['every', 'After every reply']].map(([v, t]) => el('option', { value: v, selected: co.mode === v }, t))),
     coachBox,
-    el('p', { class: 'sub', style: 'margin-top:14px' }, 'Your chats and notes stay in this browser. Search queries, and links you ask it to read, go out. If you switch the coach on, each reply it reviews goes to that company, together with your message, the few messages before it, and what the tools found.'),
+    el('p', { class: 'sub', style: 'margin-top:14px' }, 'Your chats and notes stay in this browser. Search queries, and links you ask it to read, go out. So do the replies the coach reviews, if you switch the coach on.'),
     el('p', { class: 'sub', style: 'margin-top:8px' }, 'Nano Chat is free and open source: ', el('a', { href: 'https://github.com/ToonTalk/nano-chat', target: '_blank', rel: 'noopener' }, 'how it works, and the code'), '. There is a ',
       el('a', { href: 'https://toontalk.github.io/nano-chat/student-guide.html', target: '_blank', rel: 'noopener' }, 'guide for students'), ', a ', el('a', { href: 'https://toontalk.github.io/nano-chat/teacher-guide.html', target: '_blank', rel: 'noopener' }, 'guide for teachers'), ', and an account of ',
       el('a', { href: 'https://toontalk.github.io/nano-chat/making-of.html', target: '_blank', rel: 'noopener' }, 'how it was made'), '.'));

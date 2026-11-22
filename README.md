@@ -168,9 +168,29 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   - `node tools/test-coach-live.mjs`: the coach with a real Claude key, read from the
     `ANTHROPIC_API_KEY` environment variable (add `web` to try its web search too). It costs
     a few cents a run. The key stays in the test process and is never put into the page.
+  - `node tools/build-canvas.mjs`: builds `canvas/nano-chat-canvas.html`, a test copy to paste
+    into a Gemini Canvas (see below). `node tools/test-canvas.mjs` checks it, with a stand-in
+    for Canvas.
   - `node tools/test-extras.mjs`: SVG pictures, saving a chat, and voice. Headless Chrome
     has no microphone or loudspeaker, so Chrome's speech recognition and speech output are
     replaced by stand-ins.
+
+## A test copy for Gemini Canvas
+
+Inside a Gemini Canvas, a page can ask Gemini a question with no key: Canvas answers the
+request on the viewer's own Google account. `canvas/nano-chat-canvas.html` is the same app
+with a coach that works this way, so the coach needs no key there.
+
+Canvas does not let the frame its apps run in use Chrome's built-in model, so Gemini Nano
+cannot start inside the Canvas itself. The copy therefore offers to open in a tab of its
+own, where Nano is allowed, and sends the coach's requests back through the Canvas page.
+Tried on 22 November 2026 in Chrome 157: Nano answered in that tab, and the coach's review
+came back with no key.
+
+To try it: ask Gemini for any small HTML page in a Canvas, switch the Canvas to Code,
+replace the code with the file's contents, switch back to Preview, and choose "Open Nano
+Chat in its own tab". The 🧪 Frame check button reports what the frame allows. None of this
+is documented by Google, and it may stop working.
 
 ## License
 
