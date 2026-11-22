@@ -92,7 +92,7 @@ try {
     // each way of looking back starts from the same saved state, so earlier test answers can't help
     const snap = await b.eval('JSON.stringify(NC.state.chat)');
     for (const rm of ['both', 'contents', 'keywords']) {
-      await b.eval(`(() => { const s = JSON.parse(${JSON.stringify(snap)}), c = NC.state.chat; c.turns = s.turns; c.segments = s.segments; c.compactedUpTo = s.compactedUpTo; NC.engine.dirty = true; NC.settings.recall = ${JSON.stringify(rm)}; })()`);
+      await b.eval(`(() => { const s = JSON.parse(${JSON.stringify(snap)}), c = NC.state.chat; c.turns = s.turns; c.segments = s.segments; c.compactedUpTo = s.compactedUpTo; c.seenFrom = s.seenFrom; NC.engine.dirty = true; NC.settings.recall = ${JSON.stringify(rm)}; })()`);
       const r1 = await ask('What was the name of our hotel in Lisbon, and what did it cost per night?');
       check(`[${rm}] recalls the hotel`, /casa do fado/i.test(r1.text) && /95/.test(r1.text), r1.steps.map(s => s.tool + ': ' + s.how).join('|'));
       const r2 = await ask("Remind me what my nephew's favorite chess opening is.");

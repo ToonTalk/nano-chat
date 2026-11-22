@@ -124,7 +124,39 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .dbody pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); padding: 12px; border-radius: 10px; font: 12.5px/1.5 ui-monospace, Consolas, monospace; max-height: 320px; overflow: auto; }
 .toc { display: block; width: 100%; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
 .toc:hover { border-color: var(--accent); } .toc small { color: var(--muted); display: block; }
+.body.raw { white-space: pre-wrap; }
+.tools { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.tool { background: none; border: 1px solid transparent; border-radius: 999px; padding: 2px 10px; font-size: 13px; color: var(--muted); }
+.tool:hover { border-color: var(--line); color: var(--ink); background: var(--panel); }
+.plain.sm { padding: 3px 12px; font-size: 13.5px; border-radius: 999px; }
+.offs { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.nudge { margin-top: 10px; background: var(--accent-soft); border-radius: 12px; padding: 8px 12px; font-size: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.nudge span { flex: 1; min-width: 200px; }
+.cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--panel); min-width: 0; }
+.cap { display: flex; gap: 8px; align-items: baseline; font-size: 13px; color: var(--muted); margin-bottom: 8px; } .cap b { color: var(--ink); white-space: nowrap; } .cap span { flex: 1; }
+.cap button { background: none; border: 0; color: var(--muted); padding: 0 2px; }
+.check { margin-top: 8px; font-size: 13.5px; color: var(--muted); } .check.bad { color: var(--warn); }
+.coach { margin-top: 10px; border: 1px solid var(--line); border-left: 3px solid #7c6fd6; border-radius: 12px; padding: 10px 12px; font-size: 14.5px; background: var(--panel); }
+.coach .who { font-weight: 600; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.coach summary { cursor: pointer; color: var(--muted); font-size: 13.5px; margin-top: 6px; } .coach ul { margin: 8px 0; padding-left: 1.3em; } .coach p { margin: 6px 0; }
+.coach q { font-style: italic; } .coach .said { color: var(--muted); margin-bottom: 4px; } .coach .sub { color: var(--muted); font-size: 12.5px; }
+.badge { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; margin-right: 6px; background: var(--chip); color: var(--muted); }
+.badge.good { background: #d1fae5; color: #065f46; } .badge.minor { background: #fef3c7; color: #92400e; } .badge.wrong { background: #fee2e2; color: #991b1b; }
+mark.flaw { background: #fde68a; color: #1f2328; border-radius: 3px; padding: 0 2px; }
+.group { margin: 16px 0 2px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+.part { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); font-weight: 400 !important; margin: 0 !important; }
+.dbody label.part, .dbody label.radio { display: flex; }
+.part input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.part .txt { flex: 1; } .part .txt b { font-weight: 600; } .part small { display: block; color: var(--muted); font-size: 13.5px; }
+.try { background: none; border: 0; color: var(--accent); padding: 0; font-size: 13.5px; text-align: left; text-decoration: underline; }
+.welcome .more { margin-top: 18px; font-size: 14px; }
+.row2 { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+#openParts.partial { border-color: var(--warn); color: var(--ink); }
+.pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; margin: 8px 0 12px; } .pgrid label { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 2px 0; font-size: 14.5px; }
 @media (max-width: 760px) {
+  .pill .wide { display: none; }
+  .pgrid { grid-template-columns: 1fr; }
   #app { grid-template-columns: 1fr; }
   aside { position: fixed; inset: 0 auto 0 0; width: 270px; z-index: 5; transform: translateX(-100%); transition: transform .2s; box-shadow: var(--shadow); }
   body.menu aside { transform: none; }
@@ -149,6 +181,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
       <button id="menuBtn" aria-label="Chats">☰</button>
       <h1 id="chatTitle">New chat</h1>
       <button class="pill" id="openContents" hidden>📑 Contents <span id="tocCount"></span></button>
+      <button class="pill" id="openParts" title="Switch the parts of this chatbot on and off">🧩 <span class="wide">Parts</span> <span id="partsCount"></span></button>
       <button class="pill" id="meter" title="What Nano can see right now">Memory <span class="bar"><i></i></span> <span id="meterPct">0%</span></button>
     </header>
     <div id="scroll"><div id="thread"></div></div>
@@ -179,7 +212,7 @@ function el(tag, attrs, ...kids) {
     if (k === 'class') n.className = v; else if (k === 'html') n.innerHTML = v;
     else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (k in n && k !== 'list') n[k] = v; else n.setAttribute(k, v);
   }
-  for (const k of kids.flat()) if (k != null && k !== false) n.append(k);
+  for (const k of kids.flat(Infinity)) if (k != null && k !== false) n.append(k);
   return n;
 }
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -200,8 +233,47 @@ const db = {
   put(c) { return this.tx('readwrite', s => s.put(JSON.parse(JSON.stringify(c)))); },
   del(id) { return this.tx('readwrite', s => s.delete(id)); },
 };
-const settings = Object.assign({ provider: 'wikipedia', keys: {}, recall: 'both', reader: true }, load('nanochat.settings', {}));
+const settings = Object.assign({ provider: 'wikipedia', keys: {}, recall: 'both', reader: true, smallWindow: false }, load('nanochat.settings', {}));
 const saveSettings = () => store('nanochat.settings', settings);
+
+// ───────────────────────────── the parts ─────────────────────────────
+// Gemini Nano by itself only continues a conversation. Everything else is a part the page adds around it, and
+// each part has a switch: take one away to see what it was doing, or start with none and build the chatbot up.
+const FEATURES = [
+  { k: 'instructions', g: 'What Nano is told', name: 'Instructions', on: 'Nano gets a short briefing: its name, to keep answers short, and to say so when it is unsure.', off: 'Nano gets no briefing at all, only your messages.', probe: 'Who are you, and where are you running?' },
+  { k: 'date', name: 'Today’s date', on: 'The page tells Nano what day it is.', off: 'Nano has no clock, so it can only guess the date.', probe: 'What is the date today?' },
+  { k: 'notes', name: 'Notes', on: 'Nano sees your saved notes and can save new ones, so facts carry over from chat to chat.', off: 'Nothing carries over from one chat to the next.', probe: 'Remember that my bike lock code is 4821' },
+  { k: 'contents', g: 'Memory', name: 'Contents list', on: 'When a conversation outgrows Nano’s memory, the older messages are summarized into a contents list that Nano keeps reading.', off: 'When Nano’s memory is full, the oldest messages simply fall out of its view.' },
+  { k: 'recall', name: 'Looking back', on: 'Nano can have the page fetch the exact words of an older part of the conversation.', off: 'Nano cannot reread anything that has left its memory.' },
+  { k: 'calculator', g: 'Tools', name: 'Calculator', on: 'Sums and date math are done by a real calculator in the page.', off: 'Nano does arithmetic in its head.', probe: 'What is 17.5% of 83,946.20?' },
+  { k: 'search', name: 'Web search', on: 'Facts are looked up, and the answer says where they came from.', off: 'Nano answers from whatever it remembers from its training.', probe: 'How long is the Forth Bridge in Scotland, and when did it open?' },
+  { k: 'links', name: 'Reading links', on: 'A link in your message is fetched and read.', off: 'Nano sees only the address and has to guess what is there.', probe: 'What is this page about? https://en.wikipedia.org/?curid=376094' },
+  { k: 'documents', name: 'Long texts', on: 'A long paste or an attached file is searched for the parts that matter, or read in pieces.', off: 'The text is put into your message as it is, and cut off where Nano’s memory ends.' },
+  { k: 'nudges', g: 'Finishing touches', name: 'Rules of thumb', on: 'Simple rules in the page help choose a tool: a plain sum goes straight to the calculator, a greeting needs no tool, and hints point at the likely tool.', off: 'Nano alone decides which tool each message needs.' },
+  { k: 'guard', name: 'Made-up results guard', on: 'If Nano starts writing pretend search or calculator results, the reply is cut there. Citations that point at nothing are removed.', off: 'You see whatever Nano writes.' },
+  { k: 'markdown', name: 'Formatting', on: 'Markdown is shown as headings, lists, tables and bold text.', off: 'You see the raw characters Nano writes.', probe: 'Make a small table of three planets and how many moons each has.' },
+  { k: 'titles', name: 'Chat titles', on: 'Nano gives each chat a title.', off: 'A chat is named by its first few words.' },
+  { k: 'selfcheck', g: 'Extra', extra: true, name: 'Second look', on: 'After each answer a second copy of Nano checks it and says whether it sees a problem. Slower.', off: 'Answers are not checked by Nano.' },
+];
+const PART = Object.fromEntries(FEATURES.map(f => [f.k, f])), CORE = FEATURES.filter(f => !f.extra);
+const defaultParts = on => Object.fromEntries(FEATURES.map(f => [f.k, f.extra ? false : on]));
+settings.features = Object.assign(defaultParts(true), settings.features || {});
+settings.coach = Object.assign({ mode: 'off', provider: 'anthropic', keys: {}, models: {}, quiz: true, search: false }, settings.coach || {});
+const partsOn = (F = settings.features) => CORE.filter(f => F[f.k]).length;
+function setPart(k, v) { settings.features[k] = !!v; saveSettings(); engine.dirty = true; ui.parts(); if (!state.busy) ui.thread(); else ui.meter(); }
+function setParts(F) { settings.features = Object.assign(defaultParts(true), F); saveSettings(); engine.dirty = true; ui.parts(); if (!state.busy) ui.thread(); }
+// "off: Calculator, Web search", or the short list of what is on when most parts are off
+function partsLabel(F) {
+  F = F || defaultParts(true);
+  const off = CORE.filter(f => !F[f.k]), on = CORE.filter(f => F[f.k]), extra = FEATURES.filter(f => f.extra && F[f.k]).map(f => f.name);
+  const s = !off.length ? 'every part on' : !on.length ? 'bare Nano, every part off' : off.length <= on.length ? 'off: ' + off.map(f => f.name).join(', ') : 'only on: ' + on.map(f => f.name).join(', ');
+  return s + (extra.length ? '; with ' + extra.join(', ') : '');
+}
+function partsDiff(a, b) {            // what b changes compared with a
+  a = a || defaultParts(true); b = b || defaultParts(true);
+  const d = FEATURES.filter(f => !!a[f.k] !== !!b[f.k]).map(f => `${f.name} ${b[f.k] ? 'on' : 'off'}`);
+  return d.length ? d.join(', ') : 'same parts';
+}
 let notes = load('nanochat.notes', []);            // [{id, title, body, pinned}]
 const saveNotes = () => { store('nanochat.notes', notes); engine.dirty = true; $('#noteCount').textContent = notes.length ? notes.length : ''; };
 const state = { chats: [], chat: null, abort: null, atts: [], busy: false };
@@ -394,11 +466,12 @@ function md(src, sources = []) {
 const LM = self.LanguageModel;
 const LM_OPTS = { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] };
 const SIDE_SYS = 'You follow instructions exactly and write plain, compact text. You never add information that is not in the material you are given.';
+const XMAS = (() => { const n = new Date(); return `${n.getFullYear() + (n.getMonth() === 11 && n.getDate() > 25 ? 1 : 0)}-12-25`; })();      // the next Christmas, for the examples below
 const ROUTER_SYS = `You are the tool chooser for a chat assistant. Read the user's latest message and choose the ONE tool the assistant needs next, or "answer" if it needs none. Reply with JSON like {"tool": "...", "input": "...", "title": "..."}. Use "" for a field the tool does not need.
 
 Tools
-- answer: no tool. For greetings, chat, opinions, writing, brainstorming, explaining ideas, coding help, and anything the recent conversation or the saved notes already answer.
-- calculator: for any arithmetic, percentages, or date math. "input" is a math expression, for example 0.17 * 2340, (1200 - 950) / 950 * 100, sqrt(2) * 10, 1000 * 1.05^10, daysBetween(today, 2026-12-25), addDays(today, 90), weekday(2027-01-01). Never do arithmetic yourself.
+- answer: no tool. For greetings, chat, opinions, advice, suggestions and plans, writing, brainstorming, explaining ideas, coding help, and anything the recent conversation or the saved notes already answer.
+- calculator: for any arithmetic, percentages, or date math. "input" is a math expression, for example 0.17 * 2340, (1200 - 950) / 950 * 100, sqrt(2) * 10, 1000 * 1.05^10, daysBetween(today, ${XMAS}), addDays(today, 90), weekday(${+XMAS.slice(0, 4) + 1}-01-01). Never do arithmetic yourself.
 - web_search: for facts about particular people, places, organizations, products, works, science or history where exact details matter; for anything recent or that changes over time; and whenever the user asks you to look something up. "input" is a short keyword query, not a sentence. "title" is the main subject, named the way an encyclopedia would title its article. Use names from the conversation instead of words like "it" or "there". Never search the web for the user's own private details (their codes, plans, family, preferences): those are in the notes or the conversation.
 - save_note: only when the user asks you to remember, note or save something. "title" is a short title. "input" is the fact to save, written so it makes sense on its own.
 - read_note: when one of the saved note titles looks like it holds what the user wants. "input" is that title.
@@ -408,8 +481,9 @@ Examples
 "thanks, that helps!" -> {"tool":"answer","input":"","title":""}
 "write a limerick about my cat" -> {"tool":"answer","input":"","title":""}
 "Explain recursion simply" -> {"tool":"answer","input":"","title":""}
+"suggest some names for a fishing boat" -> {"tool":"answer","input":"","title":""}
 "what's 8% sales tax on $249.99?" -> {"tool":"calculator","input":"249.99 * 0.08","title":""}
-"how many days until Christmas?" -> {"tool":"calculator","input":"daysBetween(today, 2026-12-25)","title":""}
+"how many days until Christmas?" -> {"tool":"calculator","input":"daysBetween(today, ${XMAS})","title":""}
 "I've started learning the violin, by the way." -> {"tool":"answer","input":"","title":""}
 "Who is the prime minister of Canada?" -> {"tool":"web_search","input":"prime minister of Canada","title":"Prime Minister of Canada"}
 "how tall is the Burj Khalifa" -> {"tool":"web_search","input":"Burj Khalifa height","title":"Burj Khalifa"}
@@ -420,13 +494,14 @@ Choose for the LATEST user message only. Earlier messages are shown just so you 
 When a tool has already been used for this message and its result is enough to reply, choose "answer".`;
 
 const engine = {
-  ready: false, W: 9216, realW: 9216, main: null, router: null, side: null, dirty: true, lastSystem: '',
+  ready: false, realW: 9216, main: null, router: null, side: null, dirty: true, lastSystem: '',
+  // The window the page works to. ?window=1500, or the small-memory switch, pretends it is smaller so the memory parts can be watched at work.
+  get W() { const sim = SIM_WINDOW || (settings.smallWindow ? 1500 : 0); return sim ? Math.min(sim, this.realW) : this.realW; },
   async init(onProgress) {
     const monitor = m => m.addEventListener('downloadprogress', e => onProgress && onProgress(e.loaded));
     this.side = await LM.create({ ...LM_OPTS, monitor, initialPrompts: [{ role: 'system', content: SIDE_SYS }] });
     this.router = await LM.create({ ...LM_OPTS, initialPrompts: [{ role: 'system', content: ROUTER_SYS }] });
     this.realW = this.side.contextWindow || this.side.inputQuota || 9216;
-    this.W = SIM_WINDOW ? Math.min(SIM_WINDOW, this.realW) : this.realW;
     this.ready = true;
   },
   // One question to a throwaway copy of a base session: it gets a full, clean memory and leaves no trace.
@@ -478,29 +553,51 @@ function contentsForPrompt(chat) {
   while (k < full.length && est(text()) > B.contents) k++;
   return clip(text(), B.contents * CH);
 }
-function systemPrompt(chat) {
+// Each part that is switched on adds its piece. With every part off this is empty, and Nano gets only the messages.
+function systemPrompt(chat, F = settings.features) {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  let s = `You are a friendly, helpful assistant called Nano. You run entirely on the user's own computer, inside Chrome, as the small on-device model Gemini Nano.
+  const tools = F.calculator || F.search || F.links || F.documents || F.notes || F.recall, parts = [];
+  if (F.instructions) parts.push(`You are a friendly, helpful assistant called Nano. You run entirely on the user's own computer, inside Chrome, as the small on-device model Gemini Nano.
 Keep answers clear and fairly short. You may use Markdown.
-You are a small model, so be honest: when you are not sure, say so instead of guessing, and never make up sources, links or quotations.
-You are unreliable at arithmetic. State a calculated number only when it has been given to you; otherwise say what would need working out.
-For reference, today's date is ${today}.
-Sometimes a message arrives together with facts the app has looked up for you (a calculation, search results, a note, part of a document). Trust those over your own memory and copy numbers from them exactly. You cannot look anything up yourself, so never write out calculator output or search results of your own.`;
-  const n = notesForPrompt();
-  if (n.inlined.length) s += `\n\nThe user's saved notes (things they asked you to remember):\n` + n.inlined.map(x => `- ${x.title}: ${x.body}`).join('\n');
-  if (n.titlesOnly.length) s += `\n\nOther saved notes, by title only (the app opens one when needed): ` + n.titlesOnly.map(x => x.title).join('; ');
-  const c = contentsForPrompt(chat);
-  if (c) s += `\n\nThis conversation is longer than you can hold at once. Here are the contents of the earlier part, which you no longer see word for word:\n${c}\nIf the user asks for a detail from the earlier part that is not written here, say you would need to look back, instead of guessing.`;
-  return s;
+You are a small model, so be honest: when you are not sure, say so instead of guessing, and never make up sources, links or quotations.` +
+    (F.calculator ? `\nYou are unreliable at arithmetic. State a calculated number only when it has been given to you; otherwise say what would need working out.` : '') +
+    (F.date ? `\nFor reference, today's date is ${today}.` : '') +
+    (tools ? `\nSometimes a message arrives together with facts the app has looked up for you (a calculation, search results, a note, part of a document). Trust those over your own memory and copy numbers from them exactly. You cannot look anything up yourself, so never write out calculator output or search results of your own.` : ''));
+  else if (F.date) parts.push(`Today's date is ${today}.`);
+  if (F.notes) {
+    const n = notesForPrompt();
+    if (n.inlined.length) parts.push(`The user's saved notes (things they asked you to remember):\n` + n.inlined.map(x => `- ${x.title}: ${x.body}`).join('\n'));
+    if (n.titlesOnly.length) parts.push(`Other saved notes, by title only (the app opens one when needed): ` + n.titlesOnly.map(x => x.title).join('; '));
+  }
+  const c = F.contents ? contentsForPrompt(chat) : '';
+  if (c) parts.push(`This conversation is longer than you can hold at once. Here are the contents of the earlier part, which you no longer see word for word:\n${c}\nIf the user asks for a detail from the earlier part that is not written here, say you would need to look back, instead of guessing.`);
+  return parts.join('\n\n');
 }
 const sessionText = t => clip((t.text || (t.role === 'assistant' ? '(no reply)' : '')) + (t.atts || []).map(a => `\n[The user attached "${a.name}", ${a.text.length.toLocaleString('en-US')} characters. The app read it for you.]`).join(''), B.turnCap * CH);
+// The first message Nano still sees word for word. Before it come the summarized messages (the contents list)
+// and, when the contents list is off, messages that simply fell out of view.
+const viewFrom = chat => Math.max(chat.compactedUpTo || 0, chat.seenFrom || 0);
+async function makeSession(chat, upto, F, from) {
+  const sys = systemPrompt(chat, F), msgs = [];
+  for (let i = from; i + 1 < upto; i += 2) msgs.push({ role: 'user', content: sessionText(chat.turns[i]) }, { role: 'assistant', content: sessionText(chat.turns[i + 1]) });
+  const init = sys ? [{ role: 'system', content: sys }, ...msgs] : msgs;
+  return { sys, s: await LM.create({ ...LM_OPTS, ...(init.length ? { initialPrompts: init } : {}) }) };
+}
 async function buildMain(chat, upto) {
   if (engine.main) { try { engine.main.destroy(); } catch {} engine.main = null; }
-  const sys = systemPrompt(chat), msgs = [];
-  for (let i = chat.compactedUpTo; i + 1 < upto; i += 2) msgs.push({ role: 'user', content: sessionText(chat.turns[i]) }, { role: 'assistant', content: sessionText(chat.turns[i + 1]) });
-  engine.main = await LM.create({ ...LM_OPTS, initialPrompts: [{ role: 'system', content: sys }, ...msgs] });
+  const { s, sys } = await makeSession(chat, upto, settings.features, viewFrom(chat));
+  engine.main = s;
   engine.main.addEventListener('contextoverflow', () => { console.warn('Nano dropped old messages by itself'); engine.dirty = true; });
   engine.lastSystem = sys; engine.dirty = false; engine.builtFor = chat.id;
+}
+// How many tokens the session would hold if it started at message `from`.
+const sizeFrom = (chat, from, upto, F) => { let a = est(systemPrompt(chat, F)); for (let i = from; i < upto; i++) a += est(sessionText(chat.turns[i])); return a; };
+// Without the contents list nothing is summarized: the oldest messages fall out of view until the rest fits,
+// which is what Chrome does by itself when a session overflows.
+function dropOldest(chat, upto, need, F) {
+  let from = viewFrom(chat); if (from + 2 > upto) return false;
+  do from += 2; while (from + 2 <= upto && sizeFrom(chat, from, upto, F) + need > engine.W);
+  chat.seenFrom = from; engine.dirty = true; return true;
 }
 
 // ───────────────────────────── summarizing: the table of contents ─────────────────────────────
@@ -524,7 +621,7 @@ Conversation:
 ${clip(convo, engine.realW * CH * .6)}`, SEG_SCHEMA, signal);
     chat.segments.push({ id: uid(), from: gr.from, to: gr.to, title: (r && r.title || chat.turns[gr.from].text.slice(0, 50)).trim(), topics: (r && r.topics || []).slice(0, 6), gist: (r && r.gist || '').trim() });
   }
-  chat.compactedUpTo = start; engine.dirty = true;
+  chat.compactedUpTo = chat.seenFrom = start; engine.dirty = true;
   return true;
 }
 
@@ -646,7 +743,7 @@ async function readPage(url, signal) {
 }
 function recallItems(chat) {
   const items = [];
-  for (let i = 0; i + 1 < chat.compactedUpTo; i += 2) {
+  for (let i = 0; i + 1 < viewFrom(chat); i += 2) {
     const seg = chat.segments.findIndex(s => i >= s.from && i < s.to);
     items.push({ i, seg, text: `User: ${chat.turns[i].text}\nAssistant: ${chat.turns[i + 1].text}` });
     for (const st of chat.turns[i + 1].steps || []) if (st.evidence && st.tool !== 'recall' && st.tool !== 'calculator') items.push({ i, seg, text: st.evidence });
@@ -654,21 +751,21 @@ function recallItems(chat) {
   chat.turns.forEach((t, i) => (t.atts || []).forEach(a => passages(a.text, 1200).forEach(text => items.push({ i, seg: -1, text: `From "${a.name}": ${text}` }))));
   return items;
 }
-async function recall(chat, query, step, signal) {
-  const items = recallItems(chat);
+async function recall(chat, query, step, signal, F = settings.features) {
+  const items = recallItems(chat), mode = F.contents && chat.segments.length ? settings.recall : 'keywords';
   const kw = rank(query, items), score = new Map(kw.map(x => [x.it, x.score])), top = kw.length ? kw[0].score : 1;
   let ranked = kw, picked = [];
-  if (settings.recall !== 'keywords' && chat.segments.length) {
+  if (mode !== 'keywords') {
     const r = await engine.askJSON(engine.side, `These are the contents of the earlier part of a conversation:\n${chat.segments.map((s, i) => `${i + 1}. ${s.title}. Topics: ${(s.topics || []).join(', ')}. ${clip(s.gist || '', 400)}`).join('\n')}\n\nWhich entries are most likely to hold this: "${query}"? Reply as JSON with "entries": the one or two best entry numbers.`,
       { type: 'object', properties: { entries: { type: 'array', items: { type: 'string', enum: chat.segments.map((s, i) => String(i + 1)) }, minItems: 1, maxItems: 2 } }, required: ['entries'], additionalProperties: false }, signal);
     picked = [...new Set((r && r.entries || []).map(x => +x - 1))].filter(k => chat.segments[k]);
     const inSeg = it => picked.includes(it.seg);
     // Contents only: just the entry Nano picked, best word matches first. Both: keyword matches, with that entry's messages moved up.
-    if (settings.recall === 'contents') ranked = items.filter(inSeg).map(it => ({ it, score: (score.get(it) || 0) + top * .01 }));
+    if (mode === 'contents') ranked = items.filter(inSeg).map(it => ({ it, score: (score.get(it) || 0) + top * .01 }));
     else ranked = items.map(it => ({ it, score: (score.get(it) || 0) * (inSeg(it) ? 1.5 : 1) + (inSeg(it) ? top * .5 : 0) })).filter(x => x.score > 0);
     ranked.sort((a, b) => b.score - a.score);
   }
-  step.how = `mode: ${settings.recall}` + (picked.length ? `; Nano pointed at contents ${picked.map(k => `entry ${k + 1}, “${chat.segments[k].title}”`).join(' and ')}` : settings.recall !== 'keywords' && chat.segments.length ? '; Nano pointed at no contents entry' : '');
+  step.how = `mode: ${mode}` + (picked.length ? `; Nano pointed at contents ${picked.map(k => `entry ${k + 1}, “${chat.segments[k].title}”`).join(' and ')}` : mode !== 'keywords' ? '; Nano pointed at no contents entry' : '');
   const budget = B.evidence * CH * .9, cap = Math.min(1200, Math.floor(budget / 2.2)), out = []; let used = 0;
   for (const x of ranked.slice(0, 6)) { const t = clip(x.it.text, cap); if (used + t.length > budget) break; out.push({ i: x.it.i, t }); used += t.length; }
   out.sort((a, b) => a.i - b.i);
@@ -678,7 +775,7 @@ async function recall(chat, query, step, signal) {
 
 const REMEMBER = /\b(remember|note|save|don'?t forget|keep in mind|write (this |that |it )?down|jot|memorize|store)\b/i;
 const TOOL_ING = { calculator: 'Calculating…', web_search: 'Searching…', save_note: 'Saving a note…', read_note: 'Opening a note…', recall: 'Looking back…', read_page: 'Reading the page…', document: 'Reading the attachment…' };
-async function runStep(chat, user, bot, d, signal) {
+async function runStep(chat, user, bot, d, signal, ctx) {
   const step = { tool: d.tool, input: (d.input || '').trim(), title: (d.title || '').trim(), status: 'running', label: TOOL_ING[d.tool], owner: bot.id, t0: Date.now() };
   bot.steps.push(step); ui.bot(bot.id);
   const question = user.text.replace(/https?:\/\/\S+/g, ' ').replace(/\s+/g, ' ').trim() || 'What are the main points?';
@@ -711,17 +808,19 @@ async function runStep(chat, user, bot, d, signal) {
       if (!step.input) throw new Error('there was nothing to save');
       const title = step.title || step.input.split(/\s+/).slice(0, 5).join(' ').replace(/[.,;:]$/, '');
       const old = notes.find(n => n.title.toLowerCase() === title.toLowerCase());
-      if (old) { step.undo = { id: old.id, body: old.body }; old.body = old.body.includes(step.input) ? old.body : (old.body + '\n' + step.input).trim(); }
+      if (ctx.dry) step.dry = true;                                              // a second try of an old message must not change the notes
+      else if (old) { step.undo = { id: old.id, body: old.body }; old.body = old.body.includes(step.input) ? old.body : (old.body + '\n' + step.input).trim(); }
       else { const n = { id: uid(), title, body: step.input, pinned: false }; notes.push(n); step.undo = { id: n.id, body: null }; }
-      saveNotes(); step.title = title; step.label = `Saved a note: “${title}”`; step.how = step.input;
+      if (!ctx.dry) saveNotes();
+      step.title = title; step.label = ctx.dry ? `Would save a note: “${title}” (this is a second try, so nothing was saved)` : `Saved a note: “${title}”`; step.how = step.input;
       step.evidence = `The app saved this note for the user. Title: "${title}". Text: "${step.input}"`;
     } else if (d.tool === 'read_note') {
       const n = findNote(step.input); if (!n) throw new Error(`no note matches “${step.input}”`);
       step.label = `Opened the note “${n.title}”`; step.evidence = `The user's saved note "${n.title}":\n${clip(n.body, B.evidence * CH * .9)}`;
     } else if (d.tool === 'recall') {
-      const ev = await recall(chat, step.input, step, signal);
+      const ev = await recall(chat, step.input, step, signal, ctx.F);
       step.label = `Looked back for “${step.input}”` + (ev ? '' : ' and found nothing more');
-      step.evidence = ev ? `From earlier in this conversation (word for word):\n${ev}` : `The app looked through the earlier part of this conversation for "${step.input}" and found nothing beyond what you can already see. Answer from what you can see, or say you don't have it.`;
+      step.evidence = ev ? `From earlier in this conversation (word for word):\n${ev}` : `The app looked through the earlier part of this conversation for "${step.input}" and found nothing beyond what you can already see. If the answer is in the messages you can see, give it; only otherwise say that you do not have it.`;
     }
     step.status = 'ok';
   } catch (e) {
@@ -738,25 +837,27 @@ async function runStep(chat, user, bot, d, signal) {
 function hintsFor(text) {
   const h = [];
   const asks = /\?|^\s*(what|how|calc|work out|compute|find)\b/i.test(text);      // a statement that merely contains numbers needs no arithmetic
-  if (/\d\s*[+*/^x×÷]\s*\d/.test(text) || (asks && /\d/.test(text) && /%|\b(percent|times|divided|plus|minus|sum|total|average|split|tip|interest|how (much|many)|square root)\b/i.test(text))) h.push('it has numbers to work out, so the calculator is likely');
-  if (/\b(days?|weeks?) (until|till|since|from|before|after)\b|\bwhat day\b|\bhow long (until|since)\b/i.test(text)) h.push('it is date math, so the calculator is likely');
-  if (/\b(latest|current(ly)?|today'?s|right now|recent(ly)?|news|this (week|month|year)|20[2-9]\d|who (is|won|was|invented|wrote|founded)|price|population|look up|search|how (tall|old|far|big|long is))\b/i.test(text)) h.push('it asks for a fact worth checking, so web_search is likely');
+  if (/\d\s*[+*/^x×÷]\s*\d/.test(text) || (asks && /\d/.test(text) && /%|\b(percent|times|divided|plus|minus|sum|total|average|split|tip|interest|how (much|many)|square root)\b/i.test(text))) h.push({ t: 'calculator', s: 'it has numbers to work out, so the calculator is likely' });
+  if (/\b(days?|weeks?) (until|till|since|from|before|after)\b|\bwhat day\b|\bhow long (until|since)\b/i.test(text)) h.push({ t: 'calculator', s: 'it is date math, so the calculator is likely' });
+  if (/\b(latest|current(ly)?|today'?s|right now|recent(ly)?|news|this (week|month|year)|20[2-9]\d|who (is|won|was|invented|wrote|founded)|when (did|was|were)|price|population|look up|search|how (tall|old|far|big|long is))\b/i.test(text)) h.push({ t: 'web_search', s: 'it asks for a fact worth checking, so web_search is likely' });
   return h;
 }
-async function decide(chat, user, bot, idx, signal) {
-  const text = user.text.trim(), tools = ['answer', 'calculator'], done = new Set(bot.steps.map(s => s.tool));
-  if (navigator.onLine !== false && !done.has('web_search')) tools.push('web_search');      // one search per message
-  if (REMEMBER.test(text)) tools.push('save_note');
-  const np = notesForPrompt(); if (np.titlesOnly.length) tools.push('read_note');
-  if (chat.compactedUpTo > 0 || chat.turns.some(t => (t.atts || []).length)) tools.push('recall');
+async function decide(chat, user, bot, idx, signal, ctx) {
+  const F = ctx.F, text = user.text.trim(), tools = ['answer'], done = new Set(bot.steps.map(s => s.tool));
+  if (F.calculator) tools.push('calculator');
+  if (F.search && navigator.onLine !== false && !done.has('web_search')) tools.push('web_search');      // one search per message
+  if (F.notes && REMEMBER.test(text)) tools.push('save_note');
+  const np = F.notes ? notesForPrompt() : { inlined: [], titlesOnly: [] }; if (np.titlesOnly.length) tools.push('read_note');
+  if (F.recall && (viewFrom(chat) > 0 || chat.turns.some(t => (t.atts || []).length))) tools.push('recall');
+  if (tools.length === 1) return { tool: 'answer', input: '', title: '' };                               // no tool is switched on, so there is nothing to choose
   const recent = chat.turns.slice(Math.max(0, idx - 4), idx).map(t => `${t.role === 'user' ? 'User' : 'Assistant'}: ${clip(t.text.replace(/\s+/g, ' '), 320)}`).join('\n');
   const used = bot.steps.filter(s => s.tool !== 'document' && s.tool !== 'read_page').map(s => `- ${s.tool}("${s.input}") gave: ${clip((s.evidence || s.error || '').replace(/\s+/g, ' '), 420)}`).join('\n');
-  const hints = used ? [] : hintsFor(text), nm = used ? null : noteMatch(text);
+  const hints = used || !F.nudges ? [] : hintsFor(text).filter(h => tools.includes(h.t)).map(h => h.s), nm = used || !F.nudges || !F.notes ? null : noteMatch(text);
   if (nm) hints.push(np.inlined.includes(nm) ? `the saved note "${nm.title}" seems to cover this and the assistant can already see it, so "answer" is likely` : `the saved note "${nm.title}" seems to cover this, so read_note is likely`);
   const prompt = `Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}, ${isoDate(todayDate())}.
 Tools you may choose now: ${tools.join(', ')}.
-${notes.length ? 'Saved note titles: ' + notes.map(n => n.title).join('; ') + (np.inlined.length ? '\nNotes the assistant can already see in full: ' + np.inlined.map(n => `${n.title}: ${clip(n.body, 160)}`).join(' | ') : '') : 'There are no saved notes.'}
-${chat.segments.length ? 'Earlier parts of this conversation, no longer shown word for word: ' + chat.segments.map((s, i) => `${i + 1}. ${s.title}`).join('; ') : ''}
+${F.notes && notes.length ? 'Saved note titles: ' + notes.map(n => n.title).join('; ') + (np.inlined.length ? '\nNotes the assistant can already see in full: ' + np.inlined.map(n => `${n.title}: ${clip(n.body, 160)}`).join(' | ') : '') : 'There are no saved notes.'}
+${F.contents && chat.segments.length ? 'Earlier parts of this conversation, no longer shown word for word: ' + chat.segments.map((s, i) => `${i + 1}. ${s.title}`).join('; ') : viewFrom(chat) > 0 ? 'Some earlier messages of this conversation are no longer shown to the assistant.' : ''}
 ${recent ? 'Recent conversation:\n' + recent : 'This is the start of the conversation.'}
 
 Latest user message: "${clip(text, 900)}"
@@ -765,30 +866,36 @@ Which tool next?`;
   const schema = { type: 'object', properties: { tool: { type: 'string', enum: tools }, input: { type: 'string' }, title: { type: 'string' } }, required: ['tool', 'input', 'title'], additionalProperties: false };
   const d = await engine.askJSON(engine.router, prompt, schema, signal) || { tool: 'answer', input: '', title: '' };
   if (!tools.includes(d.tool)) d.tool = 'answer';
-  if (d.tool === 'web_search' && !REQUEST.test(text) && text.split(/\s+/).length >= 8) d.tool = 'answer';      // a long statement with no question in it: the user was telling, not asking
+  if (F.nudges && d.tool === 'web_search' && !REQUEST.test(text) && text.split(/\s+/).length >= 8) d.tool = 'answer';      // a long statement with no question in it: the user was telling, not asking
   return d;
 }
 const SMALLTALK = /^(hi|hello|hey|yo|thanks|thank you|thx|ok|okay|yes|no|yep|nope|bye|goodbye|good (morning|afternoon|evening|night)|cool|great|nice|lol|wow|sure)\b[\s\S]{0,12}$/i;
 const REQUEST = /\?|\b(what|who|whom|whose|when|where|why|how|which|tell|find|search|look up|give|show|list|suggest|recommend|explain|describe|compare|check|name|define|is there|are there|can you|could you|would you|do you know|i need|i want|i'd like|i wonder|let me know|any idea|latest|news)\b/i;
 const SLASH = { search: 'web_search', calc: 'calculator', note: 'save_note', recall: 'recall', read: 'read_note' };
-async function gather(chat, user, bot, idx, signal) {
-  const text = user.text.trim(); let m;
-  for (const a of user.atts || []) await runStep(chat, user, bot, { tool: 'document', title: a.name, text: a.text, input: a.name }, signal);
-  if ((m = /^\/(search|calc|note|recall|read)\s+([\s\S]+)/i.exec(text))) { await runStep(chat, user, bot, { tool: SLASH[m[1].toLowerCase()], input: m[2].trim() }, signal); return; }
-  const urls = [...new Set(text.match(/https?:\/\/[^\s<>"')\]]+/g) || [])];
-  for (const u of urls.slice(0, 2)) await runStep(chat, user, bot, { tool: 'read_page', input: u.replace(/[.,;:!?]+$/, '') }, signal);
-  if (urls.length || (user.atts || []).length) return;
-  const pm = pureMath(text);
-  if (pm) { const s = await runStep(chat, user, bot, { tool: 'calculator', input: calcClean(pm) }, signal); if (s.status === 'ok') bot.direct = `**${s.result}**`; return; }
-  if (SMALLTALK.test(text)) return;
+const TOOL_PART = { web_search: 'search', calculator: 'calculator', save_note: 'notes', read_note: 'notes', recall: 'recall' };
+// Collects what the answer needs. Every tool here belongs to a part, and a part that is switched off is simply skipped.
+async function gather(chat, user, bot, idx, signal, ctx) {
+  const F = ctx.F, text = user.text.trim(), atts = user.atts || [], run = d => runStep(chat, user, bot, d, signal, ctx); let m;
+  if (F.documents) for (const a of atts) await run({ tool: 'document', title: a.name, text: a.text, input: a.name });
+  if ((m = /^\/(search|calc|note|recall|read)\s+([\s\S]+)/i.exec(text))) {
+    const tool = SLASH[m[1].toLowerCase()];
+    if (F[TOOL_PART[tool]]) await run({ tool, input: m[2].trim() }); else bot.direct = `That needs the part called “${PART[TOOL_PART[tool]].name}”, which is switched off.`;
+    return;
+  }
+  const urls = F.links ? [...new Set(text.match(/https?:\/\/[^\s<>"')\]]+/g) || [])] : [];
+  for (const u of urls.slice(0, 2)) await run({ tool: 'read_page', input: u.replace(/[.,;:!?]+$/, '') });
+  if (urls.length || (F.documents && atts.length)) return;
+  const pm = F.nudges && F.calculator && pureMath(text);
+  if (pm) { const s = await run({ tool: 'calculator', input: calcClean(pm) }); if (s.status === 'ok') bot.direct = `**${s.result}**`; return; }
+  if (F.nudges && SMALLTALK.test(text)) return;
   // A question about the user's own things that a saved note covers never needs the router, let alone a web search.
-  const nm = noteMatch(text);
-  if (nm && /\b(my|our|mine|i|me|we)\b/i.test(text) && !REMEMBER.test(text)) { if (!notesForPrompt().inlined.includes(nm)) await runStep(chat, user, bot, { tool: 'read_note', input: nm.title }, signal); return; }
+  const nm = F.nudges && F.notes && noteMatch(text);
+  if (nm && /\b(my|our|mine|i|me|we)\b/i.test(text) && !REMEMBER.test(text)) { if (!notesForPrompt().inlined.includes(nm)) await run({ tool: 'read_note', input: nm.title }); return; }
   for (let k = 0; k < 2; k++) {
     bot.phase = k ? 'Checking whether that is enough…' : 'Choosing how to answer…'; ui.bot(bot.id);
-    const d = await decide(chat, user, bot, idx, signal);
+    const d = await decide(chat, user, bot, idx, signal, ctx);
     if (d.tool === 'answer' || bot.steps.some(s => s.tool === d.tool && s.input === (d.input || '').trim())) break;
-    const s = await runStep(chat, user, bot, d, signal);
+    const s = await run(d);
     if (d.tool === 'save_note') { if (s.status === 'ok') bot.direct = `I've saved that in your notes as **${s.title}**.`; break; }
     if (s.status !== 'ok' || d.tool === 'calculator' || d.tool === 'read_note' || d.tool === 'recall') break;   // only a search may be followed by another step
   }
@@ -808,31 +915,20 @@ async function send(text, atts = []) {
   const user = { id: uid(), role: 'user', text: text.trim(), time: Date.now(), atts: atts.map(a => ({ name: a.name, text: a.text })) };
   const bot = { id: uid(), role: 'assistant', text: '', time: Date.now(), steps: [], sources: [], phase: 'Thinking…' };
   const idx = chat.turns.length; chat.turns.push(user, bot); chat.updated = Date.now();
-  ui.thread(); ui.busy(); const t0 = Date.now(); let viaMain = false;
-  try {
-    await gather(chat, user, bot, idx, signal);
-    if (bot.direct) { bot.text = bot.direct; }
-    else {
-      const ev = bot.steps.filter(s => s.evidence).map(s => s.evidence).join('\n\n');
-      let prompt = user.text || 'Please tell me the main points of what I attached.';
-      if (ev) prompt = `The app looked this up for the message below:\n<<<\n${clip(ev, B.evidence * CH * 1.4)}\n>>>\n\nReply to the user's message below using the information above. Answer directly, in your own voice, without mentioning the app or using phrases like "based on the information".${bot.sources.length ? ' Put the number of the source you used after each fact, like [1].' : ''} If the information does not answer the message, say so.\n\nUser's message: ${prompt}`;
-      bot.phase = 'Getting ready…'; ui.bot(bot.id);
-      await ensureMain(chat, idx);
-      if (engine.usage() + est(prompt) + B.reserve > engine.W && await compactWithStatus(chat, idx, bot, signal)) await ensureMain(chat, idx);
-      bot.phase = 'Writing…'; ui.bot(bot.id);
-      const session = ev ? await engine.main.clone({ signal }) : engine.main; viaMain = !ev;
-      const inner = new AbortController(), relay = () => inner.abort(); signal.addEventListener('abort', relay);
-      try {
-        for await (const chunk of session.promptStreaming(prompt, { signal: inner.signal })) {
-          bot.text += chunk; bot.phase = '';
-          const fake = bot.text.search(FAKE_TOOL);          // Nano has started inventing tool output: stop it there
-          if (fake >= 0) { bot.text = bot.text.slice(0, fake); viaMain = false; engine.dirty = true; inner.abort(); break; }
-          ui.bot(bot.id, true);
-        }
-      } catch (e) { if (e.name !== 'AbortError' || signal.aborted) throw e; }
-      finally { signal.removeEventListener('abort', relay); if (ev) session.destroy(); }
-      bot.text = tidyCites(bot.text.trim(), bot.sources.length);
+  ui.thread(); ui.busy(); const t0 = Date.now();
+  const F = { ...settings.features };
+  // The conversation's own session. If the new message will not fit, older messages make way first:
+  // summarized into the contents list when that part is on, otherwise they just fall out of view.
+  const base = async prompt => {
+    await ensureMain(chat, idx);
+    if (engine.usage() + est(prompt) + B.reserve > engine.W) {
+      const did = F.contents ? await compactWithStatus(chat, idx, bot, signal) : dropOldest(chat, idx, est(prompt) + B.reserve, F);
+      if (did) { if (!F.contents) { await db.put(chat).catch(console.warn); ui.thread(); } await ensureMain(chat, idx); }
     }
+    return engine.main;
+  };
+  try {
+    const viaMain = await runTurn(chat, user, bot, idx, signal, { F, base });
     // The main session keeps only what was said, not the evidence: tool results are used once and dropped.
     if (!viaMain) { if (engine.main && !engine.dirty && engine.builtFor === chat.id) { try { await engine.main.append([{ role: 'user', content: sessionText(user) }, { role: 'assistant', content: sessionText(bot) }]); } catch { engine.dirty = true; } } else engine.dirty = true; }
   } catch (e) {
@@ -842,13 +938,198 @@ async function send(text, atts = []) {
   bot.phase = ''; bot.ms = Date.now() - t0; delete bot.direct;
   ui.bot(bot.id); ui.meter();
   try {
-    if (chat.title === 'New chat' && chat.turns.length <= 8 && !bot.error && !bot.stopped && !SMALLTALK.test(user.text)) await nameChat(chat, user, bot);
-    const u = engine.usage() ?? chat.turns.slice(chat.compactedUpTo).reduce((a, t) => a + est(sessionText(t)), est(systemPrompt(chat)));
-    if (u > B.compactAt) await compactWithStatus(chat, chat.turns.length, null);
+    if (chat.title === 'New chat' && chat.turns.length <= 8 && !bot.error && !bot.stopped && !SMALLTALK.test(user.text)) {
+      if (F.titles) await nameChat(chat, user, bot);
+      else { chat.title = (user.text || ((user.atts || [])[0] || {}).name || 'Chat').split(/\s+/).slice(0, 6).join(' ').slice(0, 60); ui.chats(); ui.title(); }
+    }
+    const u = engine.usage() ?? sizeFrom(chat, viewFrom(chat), chat.turns.length, F);
+    if (F.contents && u > B.compactAt) await compactWithStatus(chat, chat.turns.length, null);
   } catch (e) { console.warn(e); }
   await db.put(chat).catch(console.warn);
-  state.busy = false; state.abort = null; ui.busy(); ui.chats(); ui.meter();
+  state.busy = false; state.abort = null; ui.busy(); ui.chats(); ui.meter(); ui.bot(bot.id);
+  if (settings.coach.mode === 'every' && coachReady() && bot.text && !bot.byPage && !bot.error) startCoach(chat, bot);
 }
+// One reply, with a given set of parts switched on. Used for the conversation itself and for second tries.
+// Returns true when the exchange went straight into the conversation's own session.
+async function runTurn(chat, user, bot, idx, signal, ctx) {
+  const F = ctx.F; bot.f = { ...F };
+  await gather(chat, user, bot, idx, signal, ctx);
+  if (bot.direct) { bot.text = bot.direct; bot.byPage = true; return false; }          // the page answered by itself: a plain sum, or a saved note
+  const ev = bot.steps.filter(s => s.evidence).map(s => s.evidence).join('\n\n');
+  let prompt = user.text || 'Please tell me the main points of what I attached.';
+  // Without the long-texts part an attachment is simply pasted into the message and cut off where Nano's memory ends.
+  if (!F.documents && (user.atts || []).length) {
+    const room = Math.max(300, (engine.W - B.reserve - est(systemPrompt(chat, F)) - est(prompt) - 60) * CH), all = user.atts.map(a => a.text).join('\n\n');
+    prompt += '\n\n' + all.slice(0, room); if (all.length > room) bot.note = `The attached text was cut off after ${Math.round(room).toLocaleString('en-US')} of its ${all.length.toLocaleString('en-US')} characters: that is all Nano's memory could take.`;
+  }
+  if (ev) prompt = `The app looked this up for the message below:\n<<<\n${clip(ev, B.evidence * CH * 1.4)}\n>>>\n\nReply to the user's message below using the information above. Answer directly, in your own voice, without mentioning the app or using phrases like "based on the information".${bot.sources.length ? ' Put the number of the source you used after each fact, like [1].' : ''} If the information does not help with the message, answer from what you know and mention that you could not check it.\n\nUser's message: ${prompt}`;
+  bot.phase = 'Getting ready…'; ui.bot(bot.id);
+  const main = await ctx.base(prompt);
+  bot.phase = 'Writing…'; ui.bot(bot.id);
+  const session = ev && !ctx.temp ? await main.clone({ signal }) : main; let viaMain = !ev && !ctx.temp;
+  const inner = new AbortController(), relay = () => inner.abort(); signal.addEventListener('abort', relay);
+  try {
+    for await (const chunk of session.promptStreaming(prompt, { signal: inner.signal })) {
+      bot.text += chunk; bot.phase = '';
+      const fake = F.guard ? bot.text.search(FAKE_TOOL) : -1;          // Nano has started inventing tool output: stop it there
+      if (fake >= 0) { bot.text = bot.text.slice(0, fake); bot.note = 'Nano began to write made-up tool results, so the reply was cut off there.'; viaMain = false; if (!ctx.temp) engine.dirty = true; inner.abort(); break; }
+      ui.bot(bot.id, true);
+    }
+  } catch (e) { if (e.name !== 'AbortError' || signal.aborted) throw e; }
+  finally { signal.removeEventListener('abort', relay); if (session !== main) session.destroy(); }
+  bot.text = F.guard ? tidyCites(bot.text.trim(), bot.sources.length) : bot.text.trim();
+  if (F.selfcheck && bot.text) await secondLook(user, bot, ev, signal);
+  return viaMain;
+}
+// The "second look" part: a throwaway copy of Nano reads the answer and says whether it sees a problem.
+const CHECK_SCHEMA = { type: 'object', properties: { verdict: { type: 'string', enum: ['fine', 'problem'] }, note: { type: 'string' } }, required: ['verdict', 'note'], additionalProperties: false };
+async function secondLook(user, bot, ev, signal) {
+  bot.phase = 'Taking a second look…'; ui.bot(bot.id); const t0 = Date.now();
+  const r = await engine.askJSON(engine.side, `A user sent a message to an assistant. Check the assistant's answer.\n\nUser's message: ${clip(user.text, 1200)}\n${ev ? `\nFacts the assistant was given:\n${clip(ev, B.evidence * CH)}\n` : ''}\nAssistant's answer: ${clip(bot.text, 2400)}\n\nIs anything in the answer wrong, made up, or not an answer to the message? Reply as JSON: "verdict" is "fine" or "problem", and "note" says in one short sentence what is wrong ("" when it is fine).`, CHECK_SCHEMA, signal);
+  if (r) bot.check = { ok: r.verdict === 'fine', note: (r.note || '').trim(), ms: Date.now() - t0 };
+  bot.phase = '';
+}
+// A second try of an old message with other parts switched on, shown beside the first answer. It gets a
+// throwaway session holding the conversation as it stood before that message, and changes nothing else.
+async function tempSession(chat, idx, F, need) {
+  let from = Math.min(viewFrom(chat), idx);
+  while (from + 2 <= idx && sizeFrom(chat, from, idx, F) + need > engine.W) from += 2;
+  return (await makeSession(chat, idx, F, from)).s;
+}
+async function rerun(botId, F, times = 1) {
+  const chat = state.chat, bi = chat.turns.findIndex(t => t.id === botId);
+  if (state.busy || !engine.ready || bi < 1) return;
+  const user = chat.turns[bi - 1], bot = chat.turns[bi], idx = bi - 1;
+  state.busy = true; const ac = new AbortController(); state.abort = ac; ui.busy();
+  F = Object.assign(defaultParts(true), F); bot.variants = bot.variants || [];
+  for (let n = 0; n < times && !ac.signal.aborted; n++) {
+    const v = { id: uid(), parent: bot.id, role: 'assistant', text: '', time: Date.now(), steps: [], sources: [], phase: 'Thinking…' };
+    bot.variants.push(v); ui.bot(bot.id); const t0 = Date.now(); let temp = null;
+    try { await runTurn(chat, user, v, idx, ac.signal, { F, dry: true, temp: true, base: async prompt => (temp = await tempSession(chat, idx, F, est(prompt) + B.reserve)) }); }
+    catch (e) { v.text = v.text.trim(); if (e.name === 'AbortError') v.stopped = true; else { console.error(e); v.error = e.message || String(e); } }
+    finally { if (temp) { try { temp.destroy(); } catch {} } }
+    v.phase = ''; v.ms = Date.now() - t0; delete v.direct; ui.bot(bot.id);
+  }
+  await db.put(chat).catch(console.warn);
+  state.busy = false; state.abort = null; ui.busy(); ui.bot(bot.id);
+}
+// ───────────────────────────── the coach (optional) ─────────────────────────────
+// A stronger model, reached with the user's own key, that looks over Nano's shoulder. It never takes part in the
+// chat: Nano does not see what it says. It gets what the glass box shows (the message, what the tools brought back,
+// which parts were on, the reply) and says how good the reply is and why it came out that way.
+const COACHES = {
+  anthropic: { name: 'Claude', model: 'claude-opus-5-5', models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'], keyUrl: 'https://console.anthropic.com/settings/keys' },
+  gemini: { name: 'Gemini', model: 'gemini-3.8-flash', models: ['gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite'], keyUrl: 'https://aistudio.google.com/app/apikey' },
+  openai: { name: 'ChatGPT', model: 'gpt-6.1-sol', models: ['gpt-6.1-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-6-luna'], keyUrl: 'https://platform.openai.com/api-keys' },
+};
+const coachKey = () => (settings.coach.keys[settings.coach.provider] || '').trim();
+const coachReady = () => settings.coach.mode !== 'off' && !!coachKey();
+const coachModel = () => (settings.coach.models[settings.coach.provider] || '').trim() || COACHES[settings.coach.provider].model;
+const COACH_SYS = `You are the coach in Nano Chat, a teaching tool. A learner is chatting with Gemini Nano, a small language model that runs inside their browser. The page adds parts around the model (instructions, a calculator, web search, notes, a contents list for long conversations, and so on), and the learner can switch each part on or off to see what it contributes. Your job is to help the learner judge one reply from Nano and understand why it came out the way it did.
+
+Check the reply carefully: its facts, its arithmetic, whether it answers what was asked, whether it invents anything, and whether it agrees with the material the page handed to the model. The model's own knowledge is old, and yours may be too for very recent events, so when you cannot verify something, say so and use the verdict "unsure" instead of guessing.
+
+Write for a curious learner, who may be a teenager: plain words, short sentences, and no jargon without a few words of explanation. Be kind about the small model, and exact about its mistakes.
+
+Reply with one JSON object and nothing else:
+{
+  "verdict": "good" | "minor" | "wrong" | "unsure",
+  "summary": "one or two sentences: your overall judgment of the reply",
+  "hint": "one question or pointer that would help the learner find the main problem themselves, without giving it away; an empty string when the verdict is good",
+  "problems": [{ "quote": "a few words copied exactly from the reply", "why": "one sentence on what is wrong with them" }],
+  "cause": "one or two sentences on why the reply came out this way, in terms of the setup: a part that was switched off, material that did not contain the answer, the model misreading its material, or a limit of small models",
+  "experiment": "one concrete thing the learner could try next to see a difference",
+  "part": "the key of the one part whose switch would most likely change the result, or an empty string"
+}
+"good" means correct and helpful. "minor" means mostly right with a small slip. "wrong" means a real error, something made up, or not an answer. Give at most four problems, and none when the verdict is good.`;
+function coachPrompt(chat, bot) {
+  const i = chat.turns.indexOf(bot), user = chat.turns[i - 1], f = bot.f || defaultParts(true), flat = s => (s || '').replace(/\s+\n/g, '\n').trim();
+  const steps = a => (a.steps || []).map(s => `- ${s.tool} "${s.input}" (${s.status === 'ok' ? 'worked' : 'failed: ' + (s.error || '')})${s.how ? '; ' + s.how : ''}${s.evidence ? '\n' + clip(s.evidence, 3500) : ''}`).join('\n');
+  const before = chat.turns.slice(Math.max(0, i - 7), i - 1).map(t => `${t.role === 'user' ? 'Learner' : 'Nano'}: ${clip(flat(t.text), 700)}`).join('\n');
+  return `Today's date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+
+THE PARTS (key, name, whether it was on for this reply, and what it does when on)
+${FEATURES.map(p => `- ${p.k}: ${p.name}: ${f[p.k] ? 'ON' : 'OFF'}. ${p.on}`).join('\n')}
+${viewFrom(chat) > 0 ? `\nThe conversation has outgrown the model's memory: it sees only the last ${Math.max(0, i - 1 - viewFrom(chat))} messages before this one word for word${f.contents && chat.segments.length ? ', plus a contents list of the older part' : ''}.\n` : ''}
+THE CONVERSATION JUST BEFORE
+${before || '(this was the first message)'}
+
+THE LEARNER'S MESSAGE
+${clip(flat(user.text), 3000)}${(user.atts || []).length ? `\n(with an attached text: ${user.atts.map(a => `"${a.name}", ${a.text.length} characters`).join('; ')})` : ''}
+
+WHAT THE PAGE HANDED TO THE MODEL FOR THIS MESSAGE
+${steps(bot) || 'Nothing. The model answered from its own memory.'}${bot.byPage ? '\n(This reply was written by the page itself, not by the model.)' : ''}${bot.note ? '\n(' + bot.note + ')' : ''}
+
+NANO'S REPLY
+${clip(flat(bot.text), 6000) || '(empty)'}${bot.stopped ? '\n(The learner stopped it before it finished.)' : ''}
+${bot.check ? `\nNANO'S OWN SECOND LOOK AT ITS REPLY\n${bot.check.ok ? 'It saw no problem.' : 'It saw a problem: ' + bot.check.note}\n` : ''}${(bot.variants || []).filter(v => v.text).length ? `\nOTHER TRIES OF THE SAME MESSAGE (the learner ran it again with different parts)\n${bot.variants.filter(v => v.text).map((v, k) => `Try ${k + 2} (${partsDiff(f, v.f)}):\n${steps(v) ? steps(v) + '\n' : ''}Reply: ${clip(flat(v.text), 2000)}`).join('\n\n')}\n` : ''}
+Judge NANO'S REPLY (the first one) and answer with the JSON object.`;
+}
+async function coachFetch(url, headers, body, signal) {
+  let r, j = null;
+  try { r = await fetch(url, { method: 'POST', signal, headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }); j = await r.json().catch(() => null); }
+  catch (e) { if (e.name === 'AbortError') throw e; throw new Error('the request did not get through'); }
+  if (!r.ok) {
+    const err = j && (Array.isArray(j) ? j[0] && j[0].error : j.error), msg = String(err && err.message || '').slice(0, 180);
+    throw new Error(r.status === 401 || r.status === 403 || /api.?key/i.test(msg) ? 'the key was not accepted' : r.status === 429 ? 'the service says the key is over its limit or out of credit'
+      : r.status === 404 || /model/i.test(msg) ? `the model name was not accepted${msg ? ' (' + msg + ')' : ''}` : `the service answered ${r.status}${msg ? ' (' + msg + ')' : ''}`);
+  }
+  return j || {};
+}
+// One question to the coach's model. Each company's API is called straight from this page with the user's key.
+async function askCoach(system, prompt, signal) {
+  const c = settings.coach, key = coachKey(), model = coachModel(), web = !!c.search;
+  if (c.provider === 'anthropic') {
+    const newer = /^claude-(fable|mythos|opus-5|sonnet-5-5)/.test(model);
+    const headers = { 'x-api-key': key, 'anthropic-version': '2026-10-21', 'anthropic-dangerous-direct-browser-access': 'true' };
+    const body = { model, max_tokens: 16000, system, messages: [{ role: 'user', content: prompt }] };
+    // If a safety check declines the request, the API retries it on the model Anthropic recommends, in the same call.
+    if (newer) { headers['anthropic-beta'] = 'server-side-fallback-2026-07-01'; body.fallbacks = 'default'; }
+    if (web) body.tools = [{ type: newer || /^claude-(sonnet-5|opus-4-[678]|sonnet-4-6)/.test(model) ? 'web_search_20260209' : 'web_search_20250305', name: 'web_search', max_uses: 3 }];
+    let text = '', said = [];
+    for (let n = 0; n < 4; n++) {                    // a turn with searches can pause; sending back what it said so far resumes it
+      const j = await coachFetch('https://api.anthropic.com/v1/messages', headers, said.length ? { ...body, messages: [body.messages[0], { role: 'assistant', content: said }] } : body, signal);
+      if (j.stop_reason === 'refusal') throw new Error('Claude declined to review this reply');
+      text += (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      if (j.stop_reason !== 'pause_turn') break;
+      said = said.concat(j.content || []);
+    }
+    return text;
+  }
+  if (c.provider === 'gemini') {
+    const gen = { maxOutputTokens: 8000 }, gm = /^gemini-(\d+)/.exec(model);
+    if (gm && +gm[1] >= 3) gen.thinkingConfig = { thinkingLevel: 'low' };
+    if (!web) gen.responseMimeType = 'application/json';
+    const j = await coachFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { 'x-goog-api-key': key },
+      { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: gen, ...(web ? { tools: [{ google_search: {} }] } : {}) }, signal);
+    return ((((j.candidates || [])[0] || {}).content || {}).parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+  }
+  if (web) {                                           // OpenAI searches the web through its Responses API
+    const j = await coachFetch('https://api.openai.com/v1/responses', { Authorization: 'Bearer ' + key }, { model, instructions: system, input: prompt, tools: [{ type: 'web_search' }], max_output_tokens: 8000 }, signal);
+    return (j.output || []).filter(o => o.type === 'message').flatMap(o => o.content || []).filter(p => p.type === 'output_text').map(p => p.text || '').join('');
+  }
+  const j = await coachFetch('https://api.openai.com/v1/chat/completions', { Authorization: 'Bearer ' + key },
+    { model, messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], max_completion_tokens: 8000, response_format: { type: 'json_object' } }, signal);
+  return String((((j.choices || [])[0] || {}).message || {}).content || '');
+}
+function parseLoose(text) {
+  const t = String(text || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) throw new Error('its answer could not be read');
+  try { return JSON.parse(t.slice(a, b + 1)); } catch { throw new Error('its answer could not be read'); }
+}
+async function startCoach(chat, bot, again) {
+  if (!coachReady() || (bot.coach && bot.coach.state === 'loading')) return;
+  const str = v => typeof v === 'string' ? v.trim() : '', show = () => { if (state.chat === chat) ui.bot(bot.id); };
+  const c = bot.coach = { state: 'loading', guess: !settings.coach.quiz ? 'skip' : again && bot.coach ? bot.coach.guess : null, by: `${COACHES[settings.coach.provider].name} (${coachModel()})`, web: !!settings.coach.search };
+  show();
+  try {
+    const r = parseLoose(await askCoach(COACH_SYS, coachPrompt(chat, bot)));
+    Object.assign(c, { state: 'done', verdict: ['good', 'minor', 'wrong', 'unsure'].includes(r.verdict) ? r.verdict : 'unsure', summary: str(r.summary), hint: str(r.hint), cause: str(r.cause), experiment: str(r.experiment), part: PART[r.part] ? r.part : '',
+      problems: (Array.isArray(r.problems) ? r.problems : []).slice(0, 4).map(p => ({ quote: str(p && p.quote), why: str(p && p.why) })).filter(p => p.why) });
+  } catch (e) { console.warn(e); c.state = 'error'; c.error = e.message || String(e); }
+  db.put(chat).catch(console.warn); show();
+}
+
 async function compactWithStatus(chat, upto, bot, signal) {
   if (bot) { bot.phase = 'Making room: summarizing older messages…'; ui.bot(bot.id); } else ui.hint('Summarizing older messages to make room…');
   const did = await compact(chat, upto, signal);
@@ -864,14 +1145,18 @@ async function nameChat(chat, user, bot) {
 // ───────────────────────────── the page ─────────────────────────────
 const STEP_ICON = { calculator: '🧮', web_search: '🔎', save_note: '📒', read_note: '📒', recall: '🕘', read_page: '📄', document: '📎' };
 const ui = {
-  hint(t) { $('#hint').textContent = t || 'Runs on this computer with Gemini Nano. It is a small model and can be wrong.'; },
+  hint(t) {
+    $('#hint').textContent = t || 'Runs on this computer with Gemini Nano. It is a small model and can be wrong.' +
+      (coachReady() ? ` Coach on: ${COACHES[settings.coach.provider].name} is sent ${settings.coach.mode === 'every' ? 'every reply' : 'the replies you ask it about'}.` : '');
+  },
+  parts() { const n = partsOn(), all = n === CORE.length; $('#partsCount').textContent = `${n}/${CORE.length}`; $('#openParts').classList.toggle('partial', !all); ui.hint(); },
   busy() {
     const b = $('#sendBtn'); b.textContent = state.busy && state.abort ? 'Stop' : 'Send';
     b.disabled = !engine.ready || (!state.busy && !$('#input').value.trim() && !state.atts.length);
   },
   title() { $('#chatTitle').textContent = state.chat.title; document.title = state.chat.turns.length ? state.chat.title + ' · Nano Chat' : 'Nano Chat'; const n = state.chat.segments.length; $('#openContents').hidden = !n; $('#tocCount').textContent = n || ''; },
   meter() {
-    const chat = state.chat, u = engine.usage() ?? (est(systemPrompt(chat)) + chat.turns.slice(chat.compactedUpTo).reduce((a, t) => a + est(sessionText(t)), 0));
+    const chat = state.chat, u = engine.usage() ?? sizeFrom(chat, viewFrom(chat), chat.turns.length, settings.features);
     const pct = Math.min(100, Math.round(100 * u / engine.W));
     $('#meter .bar i').style.width = pct + '%'; $('#meter .bar').classList.toggle('hot', pct > 80); $('#meterPct').textContent = pct + '%';
   },
@@ -895,16 +1180,18 @@ const ui = {
     chat.turns.forEach((t, i) => {
       const seg = chat.segments.find(s => s.to === i);
       if (seg) th.append(el('div', { class: 'divider' }, el('details', null, el('summary', null, `Up to here, Nano now works from a summary: “${seg.title}”`), el('p', null, seg.gist || 'No summary was written for this part.'))));
-      th.append(t.role === 'user' ? userNode(t, i) : botNode(t));
+      if (i && i === chat.seenFrom && i > (chat.compactedUpTo || 0)) th.append(el('div', { class: 'divider' }, el('details', null, el('summary', null, 'Nano no longer sees anything above this line'),
+        el('p', null, 'Its memory filled up, and with the contents list switched off the oldest messages simply fell out of view. They are still saved here, but Nano has no summary of them.'))));
+      th.append(t.role === 'user' ? userNode(t, i) : botNode(t, i));
     });
     ui.title(); ui.meter(); ui.down(true);
   },
   bot(id, streaming) {
-    const t = state.chat.turns.find(x => x.id === id), old = document.getElementById('t-' + id);
+    const i = state.chat.turns.findIndex(x => x.id === id || (x.variants || []).some(v => v.id === id)), t = state.chat.turns[i], old = t && document.getElementById('t-' + t.id);      // a second try redraws the reply it belongs to
     if (!t || !old) return;
     if (streaming) { if (ui.raf) return; ui.raf = requestAnimationFrame(() => { ui.raf = 0; ui.bot(id); }); return; }
-    const open = [...old.querySelectorAll('details.step')].map(d => d.open);
-    const n = botNode(t); [...n.querySelectorAll('details.step')].forEach((d, i) => d.open = !!open[i]);
+    const open = new Set([...old.querySelectorAll('details[open]')].map(d => d.dataset.k));      // whatever was opened stays open across the redraw
+    const n = botNode(t, i); n.querySelectorAll('details').forEach(d => { d.open = open.has(d.dataset.k); });
     const stick = ui.nearBottom(); old.replaceWith(n); if (stick) ui.down();
   },
   nearBottom() { const s = $('#scroll'); return s.scrollHeight - s.scrollTop - s.clientHeight < 90; },
@@ -915,8 +1202,88 @@ function userNode(t, i) {
     (t.atts || []).map(a => el('span', { class: 'att' }, `📎 ${a.name} · ${a.text.length.toLocaleString('en-US')} characters`)),
     t.text ? el('div', { class: 'bubble' }, t.text) : null);
 }
-function botNode(t) {
-  const steps = (t.steps || []).map(s => {
+// Which switched-off part would most likely have changed this reply? Offered under the latest reply as "try again with it on".
+const LOOKS_BACK = /\b(earlier|before|at the (start|beginning)|you said|i said|i told you|we (talked|discussed|said)|remind me|so far|what have we)\b/i;
+function nudgeFor(chat, i) {
+  const bot = chat.turns[i], user = chat.turns[i - 1];
+  if (!user || i !== chat.turns.length - 1 || bot.error) return null;
+  const f = bot.f || defaultParts(true), text = user.text, hints = hintsFor(text).map(h => h.t), c = [];
+  if (!f.calculator && (pureMath(text) || hints.includes('calculator'))) c.push('calculator');
+  if (!f.date && /\b(today|tonight|date|what day|which day|what year|this year|what month)\b/i.test(text)) c.push('date');
+  if (!f.links && /https?:\/\//.test(text)) c.push('links');
+  if (!f.documents && (user.atts || []).length) c.push('documents');
+  if (!f.notes && (REMEMBER.test(text) || (/\b(my|our|mine)\b/i.test(text) && noteMatch(text)))) c.push('notes');
+  if (!f.instructions && /\b(who|what) are you\b|your name|where are you running|which model/i.test(text)) c.push('instructions');
+  if (!f.search && hints.includes('web_search')) c.push('search');
+  if (viewFrom(chat) > 0 && LOOKS_BACK.test(text)) { if (!f.contents) c.push('contents'); if (!f.recall) c.push('recall'); }
+  const k = c.find(k => !(bot.variants || []).some(v => v.f && v.f[k]));
+  if (k) return { k };
+  return !settings.features.markdown && /\*\*[^*\n]+\*\*|^#{1,4} |^\s*[-*] \S|^\s*\|.+\|\s*$/m.test(bot.text || '') ? { k: 'markdown', flip: true } : null;
+}
+// Marks the words the coach quoted, inside the rendered reply.
+function markQuotes(root, quotes) {
+  for (let q of quotes) {
+    q = (q || '').replace(/[*_`]/g, '').replace(/\[\d+\]/g, '').trim(); if (q.length < 3) continue;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let n;
+    while ((n = w.nextNode())) {
+      const at = n.nodeValue.indexOf(q); if (at < 0) continue;
+      const r = document.createRange(); r.setStart(n, at); r.setEnd(n, at + q.length);
+      const m = el('mark', { class: 'flaw', title: 'The coach pointed at this' }); r.surroundContents(m); break;
+    }
+  }
+}
+const coachShown = c => c && c.state === 'done' && c.guess != null && (c.shown || c.guess === 'off' || c.guess === 'skip' || c.verdict === 'good' || c.verdict === 'unsure');
+function coachNode(t) {
+  const c = t.coach; if (!c) return null;
+  const chat = state.chat, redraw = () => { ui.bot(t.id); db.put(chat).catch(console.warn); };
+  const box = (...kids) => el('div', { class: 'coach' }, el('div', { class: 'who' }, '🎓 Coach'), kids), btn = (label, fn) => el('button', { class: 'plain sm', onclick: fn }, label);
+  if (c.guess == null) return box(el('div', null, 'Before the coach says anything: what do you think of this reply?'),
+    el('div', { class: 'tools' }, [['right', 'Looks right'], ['off', 'Something is off'], ['unsure', 'Not sure']].map(([g, label]) => btn(label, () => { c.guess = g; redraw(); }))));
+  if (c.state === 'loading') return box(el('div', { class: 'status' }, el('span', { class: 'spin' }), 'The coach is reading the reply…'));
+  if (c.state === 'error') return box(el('div', null, `The coach could not answer: ${c.error}.`), el('div', { class: 'tools' }, btn('Ask again', () => startCoach(chat, t, true))));
+  const flawed = c.verdict === 'wrong' || c.verdict === 'minor';
+  if (!coachShown(c)) return box(el('div', null, c.guess === 'right' ? 'You said it looks right. The coach is not so sure.' : 'The coach sees something worth a closer look.'),
+    c.hint ? el('p', null, el('b', null, 'A hint: '), c.hint) : null, el('div', { class: 'tools' }, btn('Show what the coach found', () => { c.shown = true; redraw(); })));
+  const said = c.guess === 'right' ? (flawed ? '' : c.verdict === 'good' ? 'You said it looks right, and the coach agrees.' : '')
+    : c.guess === 'off' ? (flawed ? 'You thought something was off, and the coach agrees.' : c.verdict === 'good' ? 'You thought something was off. The coach found no problem. Do its reasons convince you?' : '') : '';
+  const f = t.f || defaultParts(true), k = c.part;
+  return box(said ? el('div', { class: 'said' }, said) : null,
+    el('div', null, el('span', { class: 'badge ' + c.verdict }, { good: 'Looks good', minor: 'Mostly right', wrong: 'Has a problem', unsure: 'Cannot be sure' }[c.verdict]), c.summary),
+    el('details', { 'data-k': 'coach' }, el('summary', null, 'Why, and what to try'),
+      c.problems.length ? el('ul', null, c.problems.map(p => el('li', null, p.quote ? el('q', null, p.quote) : null, p.quote ? ' ' : null, p.why))) : null,
+      c.cause ? el('p', null, el('b', null, 'Why it came out this way: '), c.cause) : null,
+      c.experiment ? el('p', null, el('b', null, 'Try next: '), c.experiment) : null,
+      k ? el('div', { class: 'tools' }, btn(`Try again with ${PART[k].name} ${f[k] ? 'off' : 'on'}`, () => rerun(t.id, { ...f, [k]: !f[k] }))) : null,
+      el('p', { class: 'sub' }, `A second opinion from ${c.by}${c.web ? ', which could search the web' : ''}. It can be wrong too.`)));
+}
+function botNode(t, i) {
+  const chat = state.chat, done = t.ms != null && !t.phase, f = t.f || defaultParts(true), kids = [];
+  if ((t.variants || []).length) {
+    kids.push(el('div', { class: 'cmp' },
+      el('div', { class: 'card' }, el('div', { class: 'cap' }, el('b', null, 'First answer'), el('span', null, partsLabel(f))), replyParts(t)),
+      t.variants.map((v, k) => el('div', { class: 'card' },
+        el('div', { class: 'cap' }, el('b', null, `Try ${k + 2}`), el('span', null, partsDiff(f, v.f)), v.ms != null ? el('button', { title: 'Remove this try', onclick: () => { t.variants = t.variants.filter(x => x !== v); ui.bot(t.id); db.put(chat).catch(console.warn); } }, '✕') : null),
+        replyParts(v),
+        v.ms != null && FEATURES.some(p => !!v.f[p.k] !== !!settings.features[p.k]) ? el('div', { class: 'tools' }, el('button', { class: 'tool', onclick: () => setParts(v.f) }, 'Use these parts from now on')) : null))));
+  } else {
+    kids.push(replyParts(t));
+    if (done && partsOn(f) < CORE.length) kids.push(el('div', { class: 'offs' }, 'For this reply: ' + partsLabel(f) + '.'));
+  }
+  if (done) {
+    const nd = nudgeFor(chat, i);
+    if (nd) kids.push(el('div', { class: 'nudge' }, el('span', null, el('b', null, `💡 “${PART[nd.k].name}” is off. `), PART[nd.k].off),
+      nd.flip ? el('button', { class: 'plain sm', onclick: () => setPart(nd.k, true) }, 'Switch it on') : el('button', { class: 'plain sm', onclick: () => rerun(t.id, { ...f, [nd.k]: true }) }, 'Try again with it on')));
+    kids.push(coachNode(t));
+    kids.push(el('div', { class: 'tools' },
+      i - 1 >= viewFrom(chat) ? el('button', { class: 'tool', title: 'Run this message again with other parts switched on, and compare', onclick: () => showRerun(t) }, '↻ Try again…') : null,
+      coachReady() && !t.coach && t.text && !t.byPage ? el('button', { class: 'tool', onclick: () => startCoach(chat, t) }, '🎓 Ask the coach') : null));
+  }
+  const n = el('div', { class: 'msg bot', id: 't-' + t.id }, kids);
+  if (coachShown(t.coach) && t.coach.problems.length) { const b = n.querySelector('.body'); if (b) markQuotes(b, t.coach.problems.map(p => p.quote)); }
+  return n;
+}
+function replyParts(t) {
+  const steps = (t.steps || []).map((s, k) => {
     if (s.status === 'running') return el('div', { class: 'status' }, el('span', { class: 'spin' }), s.label);
     const more = el('div', { class: 'more' });
     if (s.how) more.append(el('div', null, s.how));
@@ -925,16 +1292,18 @@ function botNode(t) {
     const sum = el('summary', null, el('span', null, s.status === 'error' ? '⚠️' : STEP_ICON[s.tool]), el('span', null, s.label));
     if (s.tool === 'save_note' && s.undo && !s.undone && s.status === 'ok') sum.append(el('button', { class: 'undo', onclick: e => { e.preventDefault(); undoNote(t, s); } }, 'Undo'));
     if (s.undone) sum.append(el('span', { class: 'count' }, '(undone)'));
-    return el('details', { class: 'step' + (s.status === 'error' ? ' err' : '') }, sum, more);
+    return el('details', { class: 'step' + (s.status === 'error' ? ' err' : ''), 'data-k': `${t.id}:${k}` }, sum, more);
   });
   const cited = new Set([...(t.text || '').matchAll(/\[(\d{1,2})\]/g)].map(m => +m[1]));      // show the sources the answer points at; all of them if it points at none
-  return el('div', { class: 'msg bot', id: 't-' + t.id },
+  return [
     steps.length ? el('div', { class: 'steps' }, steps) : null,
-    t.text ? el('div', { class: 'body', html: md(t.text, t.sources) }) : null,
+    !t.text ? null : settings.features.markdown || t.byPage ? el('div', { class: 'body', html: md(t.text, t.sources) }) : el('div', { class: 'body raw' }, t.text),
     t.phase ? el('div', { class: 'status' }, el('span', { class: 'spin' }), t.phase) : null,
+    t.note ? el('div', { class: 'stopped' }, t.note) : null,
     t.stopped ? el('div', { class: 'stopped' }, 'Stopped.') : null,
     t.error ? el('div', { class: 'status', style: 'color:var(--warn)' }, `Something went wrong: ${t.error}`) : null,
-    t.sources && t.sources.length && !t.phase ? el('div', { class: 'sources' }, t.sources.map((s, i) => s.url && (!cited.size || cited.has(i + 1)) ? el('a', { href: s.url, target: '_blank', rel: 'noopener', title: s.title }, `${i + 1}. ${s.title}`) : null)) : null);
+    t.check && !t.phase ? el('div', { class: 'check' + (t.check.ok ? '' : ' bad') }, '🔁 Nano’s second look: ' + (t.check.ok ? 'it saw no problem.' : t.check.note || 'it thinks something is off.')) : null,
+    t.sources && t.sources.length && !t.phase ? el('div', { class: 'sources' }, t.sources.map((s, i) => s.url && (!cited.size || cited.has(i + 1)) ? el('a', { href: s.url, target: '_blank', rel: 'noopener', title: s.title }, `${i + 1}. ${s.title}`) : null)) : null];
 }
 function undoNote(t, s) {
   const n = notes.find(x => x.id === s.undo.id);
@@ -947,9 +1316,18 @@ function welcome() {
     ['What is 17% of 2,340?', 'Uses the calculator'], ['Who designed the Eiffel Tower, and when was it finished?', 'Searches Wikipedia'],
     ['Remember that my bike lock code is 4821', 'Saves a note'], ['How many days until New Year?', 'Does date math'],
   ];
-  return el('div', { class: 'welcome' }, LOGO(), el('h2', null, 'What shall we talk about?'),
+  const F = settings.features, on = partsOn();
+  if (on === CORE.length) return el('div', { class: 'welcome' }, LOGO(), el('h2', null, 'What shall we talk about?'),
     el('p', null, 'This chatbot runs on your own computer. It can calculate, look things up, keep notes, and read pages and long texts you give it.'),
-    el('div', { class: 'tries' }, tries.map(([q, sub]) => el('button', { onclick: () => send(q) }, q, el('small', null, sub)))));
+    el('div', { class: 'tries' }, tries.map(([q, sub]) => el('button', { onclick: () => send(q) }, q, el('small', null, sub)))),
+    el('div', { class: 'more' }, el('button', { class: 'try', onclick: () => setParts(defaultParts(false)) }, 'How much of this is the model itself? Start from bare Nano and build the chatbot up.')));
+  // Some parts are off: offer things to try that the missing parts would have handled.
+  const next = CORE.filter(f => !F[f.k] && f.probe).slice(0, 4);
+  return el('div', { class: 'welcome' }, LOGO(), el('h2', null, on ? 'A chatbot under construction' : 'This is bare Gemini Nano'),
+    el('p', null, on ? `${on} of the ${CORE.length} parts are switched on. Try something a missing part would have handled, then switch that part on and compare.`
+      : 'Every part this page adds is switched off: no instructions, no tools, no help with memory. Try what it cannot do yet, then switch on the part that fixes it.'),
+    el('div', { class: 'tries' }, next.map(f => el('button', { onclick: () => send(f.probe) }, f.probe, el('small', null, `“${f.name}” is off`)))),
+    el('div', { class: 'more' }, el('button', { class: 'try', onclick: showParts }, 'See all the parts'), ' · ', el('button', { class: 'try', onclick: () => setParts(defaultParts(true)) }, 'Switch everything on')));
 }
 function door() {
   const d = state.door || { kind: 'checking' };
@@ -970,17 +1348,19 @@ function door() {
 function dialog(title, ...body) { $('#dTitle').textContent = title; const b = $('#dBody'); b.textContent = ''; b.append(...body.flat().filter(Boolean)); const d = $('#dlg'); if (!d.open) d.showModal(); b.scrollTop = 0; }
 function showMemory() {
   const chat = state.chat, sysText = engine.lastSystem && !engine.dirty ? engine.lastSystem : systemPrompt(chat), sys = est(sysText);
-  const total = engine.usage() ?? (sys + chat.turns.slice(chat.compactedUpTo).reduce((a, t) => a + est(sessionText(t)), 0)), recent = Math.max(0, total - sys), W = engine.W;
-  const verbatim = chat.turns.length - chat.compactedUpTo;
+  const from = viewFrom(chat), F = settings.features, cu = chat.compactedUpTo || 0;
+  const total = engine.usage() ?? sizeFrom(chat, from, chat.turns.length, F), recent = Math.max(0, total - sys), W = engine.W;
+  const verbatim = chat.turns.length - from, covered = F.contents && chat.segments.length ? cu : 0, lost = from - covered;
   dialog('What Nano can see right now',
     el('p', null, `Gemini Nano can hold about ${W.toLocaleString('en-US')} tokens at once, roughly ${(Math.round(W * .7 / 100) * 100).toLocaleString('en-US')} words. That has to cover its instructions, your notes, the conversation, anything a tool brings back, and the reply it is writing.`),
     el('div', { class: 'stack' }, el('i', { class: 'k1', style: `width:${100 * sys / W}%` }), el('i', { class: 'k2', style: `width:${100 * recent / W}%` })),
     el('div', { class: 'legend' }, el('span', null, el('b', { class: 'k1' }), `Instructions, notes and contents: ${sys.toLocaleString('en-US')}`), el('span', null, el('b', { class: 'k2' }), `Recent messages: ${recent.toLocaleString('en-US')}`), el('span', null, el('b', { style: 'background:var(--line)' }), `Free: ${Math.max(0, W - total).toLocaleString('en-US')}`)),
-    el('p', null, chat.compactedUpTo
-      ? `Nano sees the last ${verbatim} messages word for word. The ${chat.compactedUpTo} before them are covered by ${chat.segments.length} contents ${chat.segments.length === 1 ? 'entry' : 'entries'}, and it can look back into them when you ask. The whole conversation stays saved in this browser.`
-      : `Nano sees all ${verbatim} messages of this conversation word for word. When the conversation outgrows the space, older parts are summarized into a contents list, and nothing is deleted.`),
-    SIM_WINDOW ? el('p', { class: 'sub' }, `Test mode: this page is pretending the window is ${W.toLocaleString('en-US')} tokens (really ${engine.realW.toLocaleString('en-US')}).`) : null,
-    el('details', null, el('summary', null, 'Show the exact instructions Nano was given'), el('pre', null, sysText)));
+    el('p', null, from
+      ? `Nano sees the last ${verbatim} messages word for word.` + (covered ? ` ${covered} earlier ones are covered by ${chat.segments.length} contents ${chat.segments.length === 1 ? 'entry' : 'entries'}.` : '') + (lost > 0 ? ` ${lost} earlier ones have fallen out of its view with no summary.` : '') +
+        (F.recall ? ' It can look back into the earlier messages when you ask.' : ' “Looking back” is switched off, so it cannot reread them.') + ' The whole conversation stays saved in this browser.'
+      : `Nano sees all ${verbatim} messages of this conversation word for word. When the conversation outgrows the space, ` + (F.contents ? 'older parts are summarized into a contents list, and nothing is deleted.' : 'the oldest messages will fall out of its view, because the contents list is switched off. They stay saved in this browser.')),
+    W < engine.realW ? el('p', { class: 'sub' }, `This page is pretending Nano's memory is ${W.toLocaleString('en-US')} tokens (really ${engine.realW.toLocaleString('en-US')}), so that the memory parts can be seen at work.`) : null,
+    el('details', null, el('summary', null, 'Show the exact instructions Nano was given'), el('pre', null, sysText || '(Nothing. Every part that tells Nano something is switched off, so it gets only the messages.)')));
 }
 function showContents() {
   const chat = state.chat;
@@ -988,6 +1368,39 @@ function showContents() {
     el('p', { class: 'sub' }, 'Nano wrote these entries when older messages no longer fit in its memory. It reads this list in place of those messages. Choose one to jump to that part.'),
     chat.segments.map((s, i) => el('button', { class: 'toc', onclick: () => { $('#dlg').close(); const n = document.getElementById('t-' + chat.turns[s.from].id); if (n) n.scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
       el('strong', null, `${i + 1}. ${s.title}`), el('small', null, s.gist), s.topics && s.topics.length ? el('small', null, 'Topics: ' + s.topics.join(', ')) : null)));
+}
+// The switch panel: every part, what it does, and something to try that shows the difference.
+function showParts() {
+  const body = el('div');
+  const draw = () => {
+    body.textContent = ''; const F = settings.features, on = partsOn();
+    body.append(el('p', null, 'By itself Gemini Nano only continues a conversation. Everything else here is a part this page adds around it. Switch a part off to see what it was doing, or start with none and build the chatbot up.'),
+      el('div', { class: 'row2' }, el('button', { class: 'plain', onclick: () => { setParts(defaultParts(false)); draw(); } }, 'Bare Nano: all off'), el('button', { class: 'plain', onclick: () => { setParts(defaultParts(true)); draw(); } }, 'Everything on'),
+        el('span', { class: 'count', style: 'align-self:center' }, `${on} of ${CORE.length} on`)));
+    for (const p of FEATURES) {
+      if (p.g) body.append(el('div', { class: 'group' }, p.g));
+      body.append(el('label', { class: 'part' }, el('input', { type: 'checkbox', checked: !!F[p.k], onchange: e => { setPart(p.k, e.target.checked); draw(); } }),
+        el('span', { class: 'txt' }, el('b', null, p.name), el('small', null, F[p.k] ? p.on : p.off),
+          p.probe ? el('button', { class: 'try', onclick: e => { e.preventDefault(); $('#dlg').close(); if (state.busy) return; if (state.chat.turns.length) newChat(); send(p.probe); } }, `Try: “${p.probe}”`) : null)));
+    }
+    body.append(el('div', { class: 'group' }, 'For experiments'),
+      el('label', { class: 'part' }, el('input', { type: 'checkbox', checked: !!settings.smallWindow, disabled: !!SIM_WINDOW, onchange: e => { settings.smallWindow = e.target.checked; saveSettings(); engine.dirty = true; ui.meter(); } }),
+        el('span', { class: 'txt' }, el('b', null, 'Pretend Nano’s memory is small'), el('small', null, `1,500 tokens in place of ${engine.realW.toLocaleString('en-US')}. The memory fills after a few messages, so you can watch the contents list and looking back at work without a very long chat.`))),
+      el('p', { class: 'sub', style: 'margin-top:14px' }, 'Under any reply, “Try again…” runs the same message with other parts switched on and shows the answers side by side. Nano does not answer the same way twice, so run it more than once before you conclude anything.'));
+  };
+  draw(); dialog('The parts of this chatbot', body);
+}
+// "Try again…": pick the parts, then run the same message again beside the first answer.
+function showRerun(t) {
+  const F = { ...settings.features }, user = state.chat.turns[state.chat.turns.indexOf(t) - 1], was = t.f || defaultParts(true), diff = el('p', { class: 'sub' });
+  const note = () => { const d = partsDiff(was, F); diff.textContent = d === 'same parts' ? 'Same parts as the first answer. Any difference you see is chance.' : 'Compared with the first answer: ' + d + '.'; };
+  note();
+  dialog('Try this message again',
+    el('p', null, el('q', null, clip(user.text || 'your attachment', 200))),
+    el('p', { class: 'sub' }, 'Choose the parts for this try. The new answer appears beside the first one. Nothing else in the conversation changes.'),
+    el('div', { class: 'pgrid' }, FEATURES.map(p => el('label', { title: p.on }, el('input', { type: 'checkbox', checked: !!F[p.k], onchange: e => { F[p.k] = e.target.checked; note(); } }), p.name))),
+    diff,
+    el('div', { class: 'row2' }, el('button', { class: 'big', style: 'margin-top:0', onclick: () => { $('#dlg').close(); rerun(t.id, F, 1); } }, 'Run once'), el('button', { class: 'plain', onclick: () => { $('#dlg').close(); rerun(t.id, F, 3); } }, 'Run 3 times')));
 }
 function showNotes() {
   const list = el('div');
@@ -1001,7 +1414,7 @@ function showNotes() {
       el('textarea', { value: n.body, placeholder: 'What to remember', oninput: e => { n.body = e.target.value; saveNotes(); } }))));
   };
   draw();
-  dialog('Notes', el('p', { class: 'sub' }, 'Notes are kept in this browser and shared by all your chats. Nano sees short notes in full; when there are too many to fit, it sees the titles and opens a note when it needs one. Pin a note to keep it always in view.'),
+  dialog('Notes', settings.features.notes ? null : el('p', { style: 'color:var(--warn)' }, 'The “Notes” part is switched off, so Nano does not see these and cannot save new ones.'), el('p', { class: 'sub' }, 'Notes are kept in this browser and shared by all your chats. Nano sees short notes in full; when there are too many to fit, it sees the titles and opens a note when it needs one. Pin a note to keep it always in view.'),
     list, el('button', { class: 'plain', onclick: () => { notes.push({ id: uid(), title: '', body: '', pinned: false }); saveNotes(); draw(); list.lastChild.querySelector('input').focus(); } }, '＋ Add a note'));
 }
 function showSettings() {
@@ -1014,6 +1427,24 @@ function showSettings() {
   };
   const radio = (id, title, sub) => el('label', { class: 'radio' }, el('input', { type: 'radio', name: 'prov', checked: settings.provider === id, onchange: () => { settings.provider = id; saveSettings(); drawKey(); } }), el('span', null, title, el('small', null, sub)));
   drawKey();
+  // The coach: which stronger model looks over Nano's shoulder, and when.
+  const co = settings.coach, coachBox = el('div'), saveCoach = () => { saveSettings(); ui.hint(); if (!state.busy) ui.thread(); };
+  const drawCoach = () => {
+    coachBox.textContent = ''; if (co.mode === 'off') return;
+    const p = COACHES[co.provider];
+    coachBox.append(
+      el('label', { for: 'coachProv' }, 'Which AI is the coach'),
+      el('select', { id: 'coachProv', onchange: e => { co.provider = e.target.value; saveCoach(); drawCoach(); } }, Object.entries(COACHES).map(([id, x]) => el('option', { value: id, selected: co.provider === id }, x.name))),
+      el('label', { for: 'coachKey' }, `Your ${p.name} key`),
+      el('input', { type: 'password', id: 'coachKey', value: co.keys[co.provider] || '', placeholder: 'Paste the key here', autocomplete: 'off', oninput: e => { co.keys[co.provider] = e.target.value.trim(); saveCoach(); } }),
+      el('p', { class: 'sub', style: 'margin-top:6px' }, 'The key is stored only in this browser and sent only to that company. You can get one at ', el('a', { href: p.keyUrl, target: '_blank', rel: 'noopener' }, host(p.keyUrl)), '. Each review is charged to your key.'),
+      el('label', { for: 'coachModel' }, 'Model'),
+      el('input', { type: 'text', id: 'coachModel', list: 'coachModels', value: co.models[co.provider] || '', placeholder: p.model, autocomplete: 'off', oninput: e => { co.models[co.provider] = e.target.value.trim(); saveCoach(); } }),
+      el('datalist', { id: 'coachModels' }, p.models.map(m => el('option', { value: m }))),
+      el('label', { class: 'radio', style: 'margin-top:10px' }, el('input', { type: 'checkbox', checked: !!co.quiz, onchange: e => { co.quiz = e.target.checked; saveCoach(); } }), el('span', null, 'Ask me what I think first', el('small', null, 'The coach waits for your own judgment of a reply before it shows its view.'))),
+      el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!co.search, onchange: e => { co.search = e.target.checked; saveCoach(); } }), el('span', null, 'Let the coach check facts on the web', el('small', null, 'Uses that company’s own web search, which is charged per search on top of the usual cost. Without it the coach knows nothing recent.'))));
+  };
+  drawCoach();
   dialog('Settings',
     el('label', null, 'Where searches go'),
     radio('wikipedia', 'Wikipedia', 'No key needed. Good for facts; no news.'), radio('tavily', 'The whole web, with a Tavily key', 'A search service made for AI assistants.'), radio('serper', 'The whole web, with a Serper key', 'Google results.'), keyBox,
@@ -1021,7 +1452,11 @@ function showSettings() {
     el('select', { id: 'recallSel', onchange: e => { settings.recall = e.target.value; saveSettings(); } },
       [['both', 'Contents list and keywords together'], ['contents', 'Contents list only: Nano picks an entry'], ['keywords', 'Keywords only: match words in the saved messages']].map(([v, t]) => el('option', { value: v, selected: settings.recall === v }, t))),
     el('label', { class: 'radio', style: 'margin-top:14px' }, el('input', { type: 'checkbox', checked: settings.reader, onchange: e => { settings.reader = e.target.checked; saveSettings(); } }), el('span', null, 'Read links through r.jina.ai when a site blocks this page', el('small', null, 'Most sites do not let another page read them. The reader service fetches the page for you; it sees the link, nothing else.'))),
-    el('p', { class: 'sub', style: 'margin-top:14px' }, 'Your chats and notes never leave this browser. Only search queries, and links you ask it to read, go out.'),
+    el('label', { for: 'coachMode', style: 'margin-top:18px' }, 'Coach (optional)'),
+    el('p', { class: 'sub' }, 'A stronger AI can look over Nano’s shoulder. It rates a reply, asks what you think first, and explains what went wrong and what to try. It never joins the chat: Nano does not see what the coach says.'),
+    el('select', { id: 'coachMode', onchange: e => { co.mode = e.target.value; saveCoach(); drawCoach(); } }, [['off', 'Off'], ['ask', 'Only when I ask, with a button under a reply'], ['every', 'After every reply']].map(([v, t]) => el('option', { value: v, selected: co.mode === v }, t))),
+    coachBox,
+    el('p', { class: 'sub', style: 'margin-top:14px' }, 'Your chats and notes stay in this browser. Search queries, and links you ask it to read, go out. If you switch the coach on, each reply it reviews goes to that company, together with your message, the few messages before it, and what the tools found.'),
     el('p', { class: 'sub', style: 'margin-top:8px' }, 'Nano Chat is free and open source: ', el('a', { href: 'https://github.com/ToonTalk/nano-chat', target: '_blank', rel: 'noopener' }, 'how it works, and the code'), '.'));
 }
 
@@ -1041,7 +1476,7 @@ $('#sendBtn').onclick = submit;
 $('#attachBtn').onclick = () => $('#fileIn').click();
 $('#fileIn').onchange = async e => { const f = e.target.files[0]; if (f) { state.atts.push({ name: f.name, text: await f.text() }); ui.atts(); ui.busy(); } e.target.value = ''; };
 $('#newChat').onclick = () => { if (!state.busy) newChat(); };
-$('#openNotes').onclick = showNotes; $('#openSettings').onclick = showSettings; $('#meter').onclick = showMemory; $('#openContents').onclick = showContents;
+$('#openNotes').onclick = showNotes; $('#openSettings').onclick = showSettings; $('#meter').onclick = showMemory; $('#openContents').onclick = showContents; $('#openParts').onclick = showParts;
 $('#dClose').onclick = () => $('#dlg').close();
 $('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg').close(); });
 $('#menuBtn').onclick = () => document.body.classList.toggle('menu');
@@ -1061,13 +1496,26 @@ async function start(byClick) {
 }
 (async () => {
   try { state.chats = await db.all(); } catch (e) { console.warn(e); }
-  for (const c of state.chats) for (const t of c.turns) { delete t.phase; (t.steps || []).forEach(s => { if (s.status === 'running') { s.status = 'error'; s.label = 'Interrupted'; } }); }
-  const last = state.chats.find(c => c.id === settings.last && c.turns.length);
+  for (const c of state.chats) for (const t of c.turns) for (const x of [t, ...(t.variants || [])]) {
+    delete x.phase; (x.steps || []).forEach(s => { if (s.status === 'running') { s.status = 'error'; s.label = 'Interrupted'; } });
+    if (x.coach && x.coach.state === 'loading') delete x.coach;
+    if (x.role === 'assistant' && x.ms == null) x.ms = 0;
+  }
+  // A link can choose the starting point: ?start=bare switches every part off, ?start=full switches them all on.
+  // It applies once and is then taken out of the address, so that a reload keeps whatever has been switched on since.
+  const sp = params.get('start');
+  if (sp === 'bare' || sp === 'full') {
+    settings.features = defaultParts(sp === 'full'); saveSettings(); params.delete('start');
+    try { history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } catch {}
+  }
+  ui.parts();
+  const last = sp ? null : state.chats.find(c => c.id === settings.last && c.turns.length);
   $('#noteCount').textContent = notes.length ? notes.length : '';
   if (last) { state.chat = last; ui.chats(); ui.thread(); ui.title(); } else newChat();
   start(false);
 })();
-window.NC = { state, engine, settings, B, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui };
+window.NC = { state, engine, settings, B, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
+  FEATURES, setPart, setParts, defaultParts, partsLabel, partsDiff, rerun, viewFrom, nudgeFor, startCoach, askCoach, coachPrompt, parseLoose, showParts, showRerun, showSettings, newChat };
 </script>
 </body>
 </html>
