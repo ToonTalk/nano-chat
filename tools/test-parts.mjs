@@ -205,7 +205,7 @@ try {
   check('and marks the words it quoted in the reply', s.marks.length === 1, J(s.marks));
   const call = await b.eval(`window.coachCalls.at(-1)`);
   check('Claude is called as the API expects', call.url === 'https://api.anthropic.com/v1/messages' && call.headers['x-api-key'] === 'k' && call.headers['anthropic-version'] === '2026-10-21' && call.headers['anthropic-dangerous-direct-browser-access'] === 'true' && call.headers['anthropic-beta'] === 'server-side-fallback-2026-07-01'
-    && call.body.model === 'claude-opus-5-5' && call.body.fallbacks === 'default' && call.body.max_tokens === 16000 && !call.body.tools && !('temperature' in call.body) && typeof call.body.system === 'string' && call.body.messages.length === 1, J({ ...call, body: { ...call.body, system: '…', messages: '…' } }));
+    && call.body.model === 'claude-sonnet-5-5' && call.body.fallbacks === 'default' && call.body.max_tokens === 16000 && !call.body.tools && !('temperature' in call.body) && typeof call.body.system === 'string' && call.body.messages.length === 1, J({ ...call, body: { ...call.body, system: '…', messages: '…' } }));
   const sent = call.body.messages[0].content;
   check('the coach is sent the message, the reply and which parts were on', /4,387 × 291/.test(sent) && /calculator: Calculator: OFF/.test(sent) && /instructions: Instructions: ON/.test(sent) && /NANO'S REPLY/.test(sent) && /answered from its own memory/.test(sent), sent.slice(0, 400));
   await b.screenshot(path.join(shots, 'coach.png'));

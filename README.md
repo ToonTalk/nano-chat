@@ -46,6 +46,18 @@ chip under a reply to see what the tool gave it.
 | Save a note / read a note | "Remember that...", and later questions about your own things. |
 | Look back | Questions about earlier parts of a long conversation or an attached document. |
 
+Three more things are not tools Nano chooses, but conveniences of the page:
+
+- **Pictures.** When Nano writes SVG code, the page draws it, with the code a click away.
+  Ask it to "draw a red circle". The picture is shown through an `<img>`, where nothing in
+  it can run, and scripts are stripped before it is drawn or saved.
+- **Save.** The Save button turns the chat into a single web page you can keep or pass on,
+  with the tool chips still openable.
+- **Voice.** In Settings you can add a microphone button and have replies read aloud. The
+  page asks Chrome to recognize speech on your computer. Chrome's online recognition, which
+  sends your voice to Google, is used only if you allow it. Reading aloud uses the
+  computer's own voices unless you pick one marked "online".
+
 You can also ask for a tool yourself by starting a message with `/search`, `/calc`, `/note`
 (save a note), `/read` (open a note) or `/recall` (look back).
 
@@ -121,6 +133,7 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   `r.jina.ai` reader, which you can turn off in Settings.
 - With the coach switched on, each reply it reviews goes to the company whose key you gave,
   together with your message, the few messages before it, and what the tools found.
+- Voice input stays on your computer unless you allow Chrome's online speech recognition.
 - Nothing else leaves your computer. Keys are kept only in this browser.
 
 ## Files
@@ -137,6 +150,9 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   - `node tools/test-parts.mjs`: the switches, second tries, the bare start and the coach
     (add `memory` or `coach` to run only that section). The coach's three services are faked
     in this test, apart from a check that each can be reached from a page.
+  - `node tools/test-extras.mjs`: SVG pictures, saving a chat, and voice. Headless Chrome
+    has no microphone or loudspeaker, so Chrome's speech recognition and speech output are
+    replaced by stand-ins.
 
 ## License
 

@@ -125,6 +125,11 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .toc { display: block; width: 100%; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
 .toc:hover { border-color: var(--accent); } .toc small { color: var(--muted); display: block; }
 .body.raw { white-space: pre-wrap; }
+.svgview { margin: .6em 0 .2em; } .svgview img { display: block; min-width: 140px; max-width: 100%; max-height: 420px; object-fit: contain; background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.svgbar { font-size: 13px; margin-top: 4px; color: var(--muted); } .svgbar a { color: var(--muted); }
+details.svgcode { margin: .2em 0 .7em; } details.svgcode summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+#micBtn.live { color: #dc2626; animation: pulse 1s ease-in-out infinite; } @keyframes pulse { 50% { opacity: .4; } }
+.saved { max-width: 780px; margin: 0 auto; padding: 26px 18px 0; } .saved h1 { font-size: 22px; margin: 0 0 4px; } .saved p { color: var(--muted); font-size: 14px; margin: 0; }
 .tools { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
 .tool { background: none; border: 1px solid transparent; border-radius: 999px; padding: 2px 10px; font-size: 13px; color: var(--muted); }
 .tool:hover { border-color: var(--line); color: var(--ink); background: var(--panel); }
@@ -181,6 +186,7 @@ mark.flaw { background: #fde68a; color: #1f2328; border-radius: 3px; padding: 0 
       <button id="menuBtn" aria-label="Chats">☰</button>
       <h1 id="chatTitle">New chat</h1>
       <button class="pill" id="openContents" hidden>📑 Contents <span id="tocCount"></span></button>
+      <button class="pill" id="saveChat" title="Save this chat as a web page you can keep or share" hidden>⬇ <span class="wide">Save</span></button>
       <button class="pill" id="openParts" title="Switch the parts of this chatbot on and off">🧩 <span class="wide">Parts</span> <span id="partsCount"></span></button>
       <button class="pill" id="meter" title="What Nano can see right now">Memory <span class="bar"><i></i></span> <span id="meterPct">0%</span></button>
     </header>
@@ -192,6 +198,7 @@ mark.flaw { background: #fde68a; color: #1f2328; border-radius: 3px; padding: 0 
           <button class="icon" id="attachBtn" title="Attach a text file">📎</button>
           <input type="file" id="fileIn" accept=".txt,.md,.csv,.json,.html,.log,text/*" hidden>
           <textarea id="input" rows="1" placeholder="Ask anything" aria-label="Message"></textarea>
+          <button class="icon" id="micBtn" title="Speak your message" hidden>🎤</button>
           <button id="sendBtn" disabled>Send</button>
         </div>
         <div class="hint" id="hint">Runs on this computer with Gemini Nano. It is a small model and can be wrong.</div>
@@ -251,7 +258,7 @@ const FEATURES = [
   { k: 'documents', name: 'Long texts', on: 'A long paste or an attached file is searched for the parts that matter, or read in pieces.', off: 'The text is put into your message as it is, and cut off where Nano’s memory ends.' },
   { k: 'nudges', g: 'Finishing touches', name: 'Rules of thumb', on: 'Simple rules in the page help choose a tool: a plain sum goes straight to the calculator, a greeting needs no tool, and hints point at the likely tool.', off: 'Nano alone decides which tool each message needs.' },
   { k: 'guard', name: 'Made-up results guard', on: 'If Nano starts writing pretend search or calculator results, the reply is cut there. Citations that point at nothing are removed.', off: 'You see whatever Nano writes.' },
-  { k: 'markdown', name: 'Formatting', on: 'Markdown is shown as headings, lists, tables and bold text.', off: 'You see the raw characters Nano writes.', probe: 'Make a small table of three planets and how many moons each has.' },
+  { k: 'markdown', name: 'Formatting', on: 'Markdown is shown as headings, lists, tables and bold text, and SVG code is drawn as a picture.', off: 'You see the raw characters Nano writes.', probe: 'Make a small table of three planets and how many moons each has.' },
   { k: 'titles', name: 'Chat titles', on: 'Nano gives each chat a title.', off: 'A chat is named by its first few words.' },
   { k: 'selfcheck', g: 'Extra', extra: true, name: 'Second look', on: 'After each answer a second copy of Nano checks it and says whether it sees a problem. Slower.', off: 'Answers are not checked by Nano.' },
 ];
@@ -259,6 +266,7 @@ const PART = Object.fromEntries(FEATURES.map(f => [f.k, f])), CORE = FEATURES.fi
 const defaultParts = on => Object.fromEntries(FEATURES.map(f => [f.k, f.extra ? false : on]));
 settings.features = Object.assign(defaultParts(true), settings.features || {});
 settings.coach = Object.assign({ mode: 'off', provider: 'anthropic', keys: {}, models: {}, quiz: true, search: false }, settings.coach || {});
+settings.voice = Object.assign({ input: false, auto: true, online: false, output: false, voice: '', rate: 1 }, settings.voice || {});
 const partsOn = (F = settings.features) => CORE.filter(f => F[f.k]).length;
 function setPart(k, v) { settings.features[k] = !!v; saveSettings(); engine.dirty = true; ui.parts(); if (!state.busy) ui.thread(); else ui.meter(); }
 function setParts(F) { settings.features = Object.assign(defaultParts(true), F); saveSettings(); engine.dirty = true; ui.parts(); if (!state.busy) ui.thread(); }
@@ -412,10 +420,30 @@ function pureMath(text) {
 }
 
 // ───────────────────────────── Markdown ─────────────────────────────
+// SVG that Nano wrote, made safe to draw and to save: it must parse, and scripts, event handlers and embedded pages are taken out.
+function cleanSvg(src) {
+  let s = src.trim();
+  if (!/^<svg[^>]*\sxmlns\s*=/i.test(s)) s = s.replace(/^<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');      // Nano usually forgets this, and without it nothing is drawn
+  if (/xlink:/.test(s) && !/xmlns:xlink/.test(s)) s = s.replace(/^<svg/i, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+  try {
+    const doc = new DOMParser().parseFromString(s, 'image/svg+xml'), root = doc.documentElement;
+    if (!root || root.localName !== 'svg' || doc.getElementsByTagName('parsererror').length) return null;
+    doc.querySelectorAll('script, foreignObject, iframe').forEach(n => n.remove());
+    for (const n of [root, ...root.querySelectorAll('*')]) for (const a of [...n.attributes]) if (/^on/i.test(a.name) || (/href$/i.test(a.name) && /^\s*(javascript|data:text\/html)/i.test(a.value))) n.removeAttribute(a.name);
+    return new XMLSerializer().serializeToString(root);
+  } catch { return null; }
+}
 function md(src, sources = []) {
   const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const blocks = [];
-  src = src.replace(/```[\w+-]*\n?([\s\S]*?)(?:```|$)/g, (m, code) => { blocks.push('<pre><code>' + esc(code.replace(/\n$/, '')) + '</code></pre>'); return `\n\u0000${blocks.length - 1}\u0000\n`; });
+  const blocks = [], hold = h => { blocks.push(h); return `\n\u0000${blocks.length - 1}\u0000\n`; };
+  // SVG code is drawn as a picture, with the code a click away. It is shown through an <img>, where nothing in it can run.
+  const picture = (svg, code) => {
+    const clean = cleanSvg(svg); if (!clean) return null;
+    const uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(clean);
+    return `<div class="svgview"><img alt="The picture this SVG code draws" src="${uri}"><div class="svgbar"><a download="picture.svg" href="${uri}">Save this picture</a></div></div><details class="svgcode" data-k="svg${blocks.length}"><summary>The SVG code</summary><pre><code>${esc(code.replace(/\n$/, ''))}</code></pre></details>`;
+  };
+  src = src.replace(/```[\w+-]*\n?([\s\S]*?)(?:```|$)/g, (m, code) => { const svg = /<svg[\s\S]*<\/svg>/i.exec(code); return hold(svg && picture(svg[0], code) || '<pre><code>' + esc(code.replace(/\n$/, '')) + '</code></pre>'); });
+  src = src.replace(/<svg[\s\S]*?<\/svg>/gi, m => { const p = !m.includes('`') && picture(m, m); return p ? hold(p) : m; });
   const inline = s => {
     s = esc(s); const ic = [];
     s = s.replace(/`([^`\n]+)`/g, (m, c) => { ic.push('<code>' + c + '</code>'); return `\u0001${ic.length - 1}\u0001`; });
@@ -558,7 +586,7 @@ function systemPrompt(chat, F = settings.features) {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const tools = F.calculator || F.search || F.links || F.documents || F.notes || F.recall, parts = [];
   if (F.instructions) parts.push(`You are a friendly, helpful assistant called Nano. You run entirely on the user's own computer, inside Chrome, as the small on-device model Gemini Nano.
-Keep answers clear and fairly short. You may use Markdown.
+Keep answers clear and fairly short. You may use Markdown.${F.markdown ? ' When the user asks for a drawing or picture, write it as SVG code in a code block: the app shows the picture.' : ''}
 You are a small model, so be honest: when you are not sure, say so instead of guessing, and never make up sources, links or quotations.` +
     (F.calculator ? `\nYou are unreliable at arithmetic. State a calculated number only when it has been given to you; otherwise say what would need working out.` : '') +
     (F.date ? `\nFor reference, today's date is ${today}.` : '') +
@@ -867,10 +895,13 @@ Which tool next?`;
   const d = await engine.askJSON(engine.router, prompt, schema, signal) || { tool: 'answer', input: '', title: '' };
   if (!tools.includes(d.tool)) d.tool = 'answer';
   if (F.nudges && d.tool === 'web_search' && !REQUEST.test(text) && text.split(/\s+/).length >= 8) d.tool = 'answer';      // a long statement with no question in it: the user was telling, not asking
+  if (F.nudges && d.tool === 'web_search' && MAKES.test(text) && MADE.test(text) && !hintsFor(text).some(h => h.t === 'web_search')) d.tool = 'answer';      // "create the SVG for a star", "write a poem": something to make, not to look up
   return d;
 }
 const SMALLTALK = /^(hi|hello|hey|yo|thanks|thank you|thx|ok|okay|yes|no|yep|nope|bye|goodbye|good (morning|afternoon|evening|night)|cool|great|nice|lol|wow|sure)\b[\s\S]{0,12}$/i;
 const REQUEST = /\?|\b(what|who|whom|whose|when|where|why|how|which|tell|find|search|look up|give|show|list|suggest|recommend|explain|describe|compare|check|name|define|is there|are there|can you|could you|would you|do you know|i need|i want|i'd like|i wonder|let me know|any idea|latest|news)\b/i;
+const MAKES = /^\s*((can|could|would|will) you\s+)?(please\s+)?(write|create|make|draw|generate|compose|code|design|build|give me)\b/i;
+const MADE = /\b(svg|html|css|javascript|python|code|program|function|script|regex|poem|story|song|joke|limerick|haiku|essay|drawing|picture|image|logo|icon)\b/i;
 const SLASH = { search: 'web_search', calc: 'calculator', note: 'save_note', recall: 'recall', read: 'read_note' };
 const TOOL_PART = { web_search: 'search', calculator: 'calculator', save_note: 'notes', read_note: 'notes', recall: 'recall' };
 // Collects what the answer needs. Every tool here belongs to a part, and a part that is switched off is simply skipped.
@@ -910,6 +941,7 @@ const tidyCites = (text, n) => text.split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/).ma
 async function ensureMain(chat, upto) { if (!engine.main || engine.dirty || engine.builtFor !== chat.id) await buildMain(chat, upto); }
 async function send(text, atts = []) {
   if (state.busy || !engine.ready || (!text.trim() && !atts.length)) return;
+  stopSpeaking();
   const chat = state.chat; state.busy = true;
   const ac = new AbortController(); state.abort = ac; const signal = ac.signal;
   const user = { id: uid(), role: 'user', text: text.trim(), time: Date.now(), atts: atts.map(a => ({ name: a.name, text: a.text })) };
@@ -948,6 +980,7 @@ async function send(text, atts = []) {
   await db.put(chat).catch(console.warn);
   state.busy = false; state.abort = null; ui.busy(); ui.chats(); ui.meter(); ui.bot(bot.id);
   if (settings.coach.mode === 'every' && coachReady() && bot.text && !bot.byPage && !bot.error) startCoach(chat, bot);
+  if (settings.voice.output && bot.text && !bot.stopped && state.chat === chat) speak(bot);
 }
 // One reply, with a given set of parts switched on. Used for the conversation itself and for second tries.
 // Returns true when the exchange went straight into the conversation's own session.
@@ -1018,7 +1051,7 @@ async function rerun(botId, F, times = 1) {
 // chat: Nano does not see what it says. It gets what the glass box shows (the message, what the tools brought back,
 // which parts were on, the reply) and says how good the reply is and why it came out that way.
 const COACHES = {
-  anthropic: { name: 'Claude', model: 'claude-opus-5-5', models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'], keyUrl: 'https://console.anthropic.com/settings/keys' },
+  anthropic: { name: 'Claude', model: 'claude-sonnet-5-5', models: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-5-5', 'claude-fable-5-2'], keyUrl: 'https://console.anthropic.com/settings/keys' },
   gemini: { name: 'Gemini', model: 'gemini-3.8-flash', models: ['gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite'], keyUrl: 'https://aistudio.google.com/app/apikey' },
   openai: { name: 'ChatGPT', model: 'gpt-6.1-sol', models: ['gpt-6.1-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-6-luna'], keyUrl: 'https://platform.openai.com/api-keys' },
 };
@@ -1154,7 +1187,7 @@ const ui = {
     const b = $('#sendBtn'); b.textContent = state.busy && state.abort ? 'Stop' : 'Send';
     b.disabled = !engine.ready || (!state.busy && !$('#input').value.trim() && !state.atts.length);
   },
-  title() { $('#chatTitle').textContent = state.chat.title; document.title = state.chat.turns.length ? state.chat.title + ' · Nano Chat' : 'Nano Chat'; const n = state.chat.segments.length; $('#openContents').hidden = !n; $('#tocCount').textContent = n || ''; },
+  title() { $('#saveChat').hidden = !state.chat.turns.length; $('#chatTitle').textContent = state.chat.title; document.title = state.chat.turns.length ? state.chat.title + ' · Nano Chat' : 'Nano Chat'; const n = state.chat.segments.length; $('#openContents').hidden = !n; $('#tocCount').textContent = n || ''; },
   meter() {
     const chat = state.chat, u = engine.usage() ?? sizeFrom(chat, viewFrom(chat), chat.turns.length, settings.features);
     const pct = Math.min(100, Math.round(100 * u / engine.W));
@@ -1276,9 +1309,11 @@ function botNode(t, i) {
     kids.push(coachNode(t));
     kids.push(el('div', { class: 'tools' },
       i - 1 >= viewFrom(chat) ? el('button', { class: 'tool', title: 'Run this message again with other parts switched on, and compare', onclick: () => showRerun(t) }, '↻ Try again…') : null,
+      canSpeak && t.text ? el('button', { class: 'tool', onclick: () => tts.id === t.id ? stopSpeaking() : speak(t) }, tts.id === t.id ? '⏹ Stop reading' : '🔊 Read aloud') : null,
       coachReady() && !t.coach && t.text && !t.byPage ? el('button', { class: 'tool', onclick: () => startCoach(chat, t) }, '🎓 Ask the coach') : null));
   }
   const n = el('div', { class: 'msg bot', id: 't-' + t.id }, kids);
+  n.querySelectorAll('.svgview img').forEach(img => img.addEventListener('error', () => { img.parentNode.textContent = 'This SVG code could not be drawn.'; }));
   if (coachShown(t.coach) && t.coach.problems.length) { const b = n.querySelector('.body'); if (b) markQuotes(b, t.coach.problems.map(p => p.quote)); }
   return n;
 }
@@ -1345,7 +1380,7 @@ function door() {
 }
 
 // dialogs
-function dialog(title, ...body) { $('#dTitle').textContent = title; const b = $('#dBody'); b.textContent = ''; b.append(...body.flat().filter(Boolean)); const d = $('#dlg'); if (!d.open) d.showModal(); b.scrollTop = 0; }
+function dialog(title, ...body) { $('#dTitle').textContent = title; const b = $('#dBody'); b.textContent = ''; b.append(...body.flat(Infinity).filter(Boolean)); const d = $('#dlg'); if (!d.open) d.showModal(); b.scrollTop = 0; }
 function showMemory() {
   const chat = state.chat, sysText = engine.lastSystem && !engine.dirty ? engine.lastSystem : systemPrompt(chat), sys = est(sysText);
   const from = viewFrom(chat), F = settings.features, cu = chat.compactedUpTo || 0;
@@ -1445,6 +1480,23 @@ function showSettings() {
       el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!co.search, onchange: e => { co.search = e.target.checked; saveCoach(); } }), el('span', null, 'Let the coach check facts on the web', el('small', null, 'Uses that company’s own web search, which is charged per search on top of the usual cost. Without it the coach knows nothing recent.'))));
   };
   drawCoach();
+  // Voice: speaking a message, and having replies read aloud.
+  const vo = settings.voice, saveVoice = () => { saveSettings(); ui.mic(); };
+  const voiceSel = el('select', { id: 'voiceSel', onchange: e => { vo.voice = e.target.value; saveVoice(); } });
+  const fillVoices = () => { voiceSel.textContent = ''; const vs = voicesFor(); if (!vs.length) voiceSel.append(el('option', { value: '' }, 'The computer’s usual voice')); vs.forEach(v => voiceSel.append(el('option', { value: v.voiceURI, selected: vo.voice === v.voiceURI }, v.name + (v.localService ? '' : ' (online)')))); };
+  fillVoices(); if (canSpeak) speechSynthesis.onvoiceschanged = fillVoices;
+  const tick = (key, title, sub, off) => el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!vo[key], disabled: !!off, onchange: e => { vo[key] = e.target.checked; saveVoice(); } }), el('span', null, title, el('small', null, sub)));
+  const voiceBox = [
+    el('label', { style: 'margin-top:18px' }, 'Voice'),
+    tick('input', 'Show a microphone button, to speak a message', SR ? 'Chrome turns your speech into text. This page asks Chrome to do that on this computer, so your voice stays here.' : 'This browser has no speech recognition.', !SR),
+    tick('auto', 'Send the message as soon as I stop speaking', 'Otherwise the words go into the message box for you to check first.', !SR),
+    tick('online', 'Allow Chrome’s online speech recognition', 'Only used when Chrome cannot recognize speech on this computer. The sound of your voice then goes to Google.', !SR),
+    tick('output', 'Read every reply aloud', canSpeak ? 'There is also a “Read aloud” button under each reply. Code, tables and pictures are skipped.' : 'This browser cannot speak.', !canSpeak),
+    canSpeak ? [el('label', { for: 'voiceSel' }, 'Reading voice'), voiceSel,
+      el('div', { class: 'row2', style: 'margin-top:8px;align-items:center' },
+        el('select', { id: 'rateSel', style: 'width:auto', onchange: e => { vo.rate = +e.target.value; saveVoice(); } }, [[.8, 'Slower'], [1, 'Normal speed'], [1.25, 'Faster'], [1.5, 'Fastest']].map(([v, t]) => el('option', { value: v, selected: +vo.rate === v }, t))),
+        el('button', { class: 'plain', onclick: () => speak({ id: 'sample', text: 'Hello! This is how I sound when I read a reply to you.' }) }, 'Hear it')),
+      el('p', { class: 'sub', style: 'margin-top:6px' }, 'Voices marked “online” send the words of the reply to their maker to be spoken. The others speak on this computer.')] : null];
   dialog('Settings',
     el('label', null, 'Where searches go'),
     radio('wikipedia', 'Wikipedia', 'No key needed. Good for facts; no news.'), radio('tavily', 'The whole web, with a Tavily key', 'A search service made for AI assistants.'), radio('serper', 'The whole web, with a Serper key', 'Google results.'), keyBox,
@@ -1452,6 +1504,7 @@ function showSettings() {
     el('select', { id: 'recallSel', onchange: e => { settings.recall = e.target.value; saveSettings(); } },
       [['both', 'Contents list and keywords together'], ['contents', 'Contents list only: Nano picks an entry'], ['keywords', 'Keywords only: match words in the saved messages']].map(([v, t]) => el('option', { value: v, selected: settings.recall === v }, t))),
     el('label', { class: 'radio', style: 'margin-top:14px' }, el('input', { type: 'checkbox', checked: settings.reader, onchange: e => { settings.reader = e.target.checked; saveSettings(); } }), el('span', null, 'Read links through r.jina.ai when a site blocks this page', el('small', null, 'Most sites do not let another page read them. The reader service fetches the page for you; it sees the link, nothing else.'))),
+    voiceBox,
     el('label', { for: 'coachMode', style: 'margin-top:18px' }, 'Coach (optional)'),
     el('p', { class: 'sub' }, 'A stronger AI can look over Nano’s shoulder. It rates a reply, asks what you think first, and explains what went wrong and what to try. It never joins the chat: Nano does not see what the coach says.'),
     el('select', { id: 'coachMode', onchange: e => { co.mode = e.target.value; saveCoach(); drawCoach(); } }, [['off', 'Off'], ['ask', 'Only when I ask, with a button under a reply'], ['every', 'After every reply']].map(([v, t]) => el('option', { value: v, selected: co.mode === v }, t))),
@@ -1472,6 +1525,101 @@ function submit() { if (state.busy) { if (state.abort) state.abort.abort(); retu
 input.addEventListener('input', () => { grow(); ui.busy(); });
 input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!state.busy) submit(); } });
 input.addEventListener('paste', e => { const t = e.clipboardData.getData('text/plain'); if (t.length > 2500) { e.preventDefault(); state.atts.push({ name: 'Pasted text', text: t }); ui.atts(); ui.busy(); } });
+// ───────────────────────────── saving a chat as a web page ─────────────────────────────
+// The saved file is the conversation as it looks here (tool chips still open on a click), with the page's own
+// styles inside it, so it needs nothing else to be read later or passed on.
+function saveChat() {
+  const chat = state.chat; if (!chat.turns.length) return;
+  const th = $('#thread').cloneNode(true), esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  th.querySelectorAll('.spin').forEach(n => n.parentNode.remove());
+  th.querySelectorAll('.coach').forEach(n => { if (!n.querySelector('.badge')) n.remove(); });           // a coach box still waiting for an answer says nothing worth keeping
+  th.querySelectorAll('button, .nudge, .svgbar').forEach(n => n.remove());
+  th.querySelectorAll('.tools').forEach(n => { if (!n.children.length) n.remove(); });
+  th.querySelectorAll('[id]').forEach(n => n.removeAttribute('id'));
+  const when = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), n = chat.turns.length;
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(chat.title)} · Nano Chat</title>
+<link rel="icon" href="${document.querySelector('link[rel=icon]').getAttribute('href')}">
+<style>${document.querySelector('style').textContent}
+html, body { height: auto; } .thread { max-width: 780px; margin: 0 auto; padding: 22px 18px 40px; }</style>
+</head>
+<body>
+<div class="saved"><h1>${esc(chat.title)}</h1><p>A conversation with Gemini Nano, the small model built into Chrome, saved from <a href="https://toontalk.github.io/nano-chat/">Nano Chat</a> on ${when}. ${n} messages.</p></div>
+<div class="thread">${th.innerHTML}</div>
+</body>
+</html>
+`;
+  const name = (chat.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || 'chat') + '.html';
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' })), a = el('a', { href: url, download: name });
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+  ui.hint(`Saved as ${name} in your downloads folder.`); setTimeout(() => ui.hint(), 5000);
+  return { name, html };
+}
+$('#saveChat').onclick = saveChat;
+
+// ───────────────────────────── voice ─────────────────────────────
+// Speaking a message uses Chrome's speech recognition. Chrome can do that on this computer, and this page asks for
+// that; its older way sends the sound of your voice to Google, which is used only if the user allows it in Settings.
+const SR = self.SpeechRecognition || self.webkitSpeechRecognition, mic = { rec: null, on: false };
+const MIC_ERR = { 'not-allowed': 'Chrome was not allowed to use the microphone.', 'service-not-allowed': 'Chrome did not allow speech recognition here.', 'audio-capture': 'No microphone was found.',
+  network: 'Speech recognition could not reach its service.', 'language-not-supported': 'Speech recognition for English is not installed.' };
+async function micToggle() {
+  if (mic.on) { mic.rec.stop(); return; }
+  if (!SR || state.busy || mic.starting) return;
+  mic.starting = true; stopSpeaking();
+  const rec = new SR(), want = { langs: ['en-US'], processLocally: true }; let local = false, said = '', err = '';
+  try {
+    if (SR.available) {
+      let a = await SR.available(want);
+      if (a === 'downloadable' || a === 'downloading') { ui.hint('Getting Chrome’s speech recognition for this computer. This happens once…'); if (SR.install) await SR.install(want); a = await SR.available(want); }
+      local = a === 'available';
+    }
+  } catch (e) { console.warn(e); }
+  mic.starting = false; ui.hint();
+  if (!local && !settings.voice.online) { ui.hint('Chrome cannot recognize speech on this computer. In Settings you can allow its online speech recognition instead.'); return; }
+  if (local) rec.processLocally = true;
+  rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false;
+  const base = input.value.trim();
+  rec.onresult = e => { let t = ''; for (const r of e.results) t += r[0].transcript; said = t.trim(); input.value = (base ? base + ' ' : '') + said; grow(); ui.busy(); };
+  rec.onerror = e => { err = e.error; };
+  rec.onend = () => {
+    mic.on = false; mic.rec = null; ui.mic();
+    if (err && err !== 'no-speech' && err !== 'aborted') ui.hint(MIC_ERR[err] || `Speech recognition stopped (${err}).`);
+    else { ui.hint(); if (said && settings.voice.auto && !state.busy) submit(); else input.focus(); }
+  };
+  try { rec.start(); mic.rec = rec; mic.on = true; ui.mic(); ui.hint(local ? 'Listening… (your voice stays on this computer)' : 'Listening… (Chrome sends your voice to Google to recognize it)'); }
+  catch (e) { ui.hint('The microphone could not be started.'); }
+}
+ui.mic = () => { const b = $('#micBtn'); b.hidden = !(SR && settings.voice.input); b.classList.toggle('live', mic.on); b.title = mic.on ? 'Stop listening' : 'Speak your message'; };
+$('#micBtn').onclick = micToggle;
+// Reading a reply aloud uses the voices on this computer. Code, tables, pictures and citation numbers are left out.
+const tts = { id: null, tok: null }, canSpeak = 'speechSynthesis' in self;
+const voicesFor = () => { const all = canSpeak ? speechSynthesis.getVoices() : [], en = all.filter(v => /^en/i.test(v.lang)); return (en.length ? en : all).sort((a, b) => (b.localService ? 1 : 0) - (a.localService ? 1 : 0)); };
+function speakable(t) {
+  const d = el('div', { html: md(t.text || '', []) });
+  d.querySelectorAll('pre, table, .svgview, details').forEach(n => n.remove());
+  d.querySelectorAll('p, li, h1, h2, h3, h4, br').forEach(n => n.append(' '));
+  return d.textContent.replace(/\[\d{1,2}\]/g, '').replace(/[*_#`|]/g, '').replace(/\s+/g, ' ').replace(/ ([.,;:!?])/g, '$1').trim();
+}
+function speak(t) {
+  if (!canSpeak) return; stopSpeaking();
+  const text = speakable(t); if (!text) return;
+  const vs = voicesFor(), v = vs.find(x => x.voiceURI === settings.voice.voice) || vs[0] || null, tok = tts.tok = {}, chunks = [];
+  for (const s of text.match(/[^.!?]+[.!?]*\s*/g) || [text]) { if (chunks.length && chunks.at(-1).length + s.length < 220) chunks[chunks.length - 1] += s; else chunks.push(s); }      // short pieces: Chrome cuts off long ones
+  tts.id = t.id;
+  chunks.forEach((c, i) => {
+    const u = new SpeechSynthesisUtterance(c); if (v) { u.voice = v; u.lang = v.lang; } u.rate = +settings.voice.rate || 1;
+    if (i === chunks.length - 1) u.onend = u.onerror = () => { if (tts.tok === tok) { tts.id = tts.tok = null; ui.bot(t.id); } };
+    speechSynthesis.speak(u);
+  });
+  ui.bot(t.id);
+}
+function stopSpeaking() { const id = tts.id; tts.id = tts.tok = null; if (canSpeak) speechSynthesis.cancel(); if (id && state.chat) ui.bot(id); }
+
 $('#sendBtn').onclick = submit;
 $('#attachBtn').onclick = () => $('#fileIn').click();
 $('#fileIn').onchange = async e => { const f = e.target.files[0]; if (f) { state.atts.push({ name: f.name, text: await f.text() }); ui.atts(); ui.busy(); } e.target.value = ''; };
@@ -1508,14 +1656,14 @@ async function start(byClick) {
     settings.features = defaultParts(sp === 'full'); saveSettings(); params.delete('start');
     try { history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } catch {}
   }
-  ui.parts();
+  ui.parts(); ui.mic();
   const last = sp ? null : state.chats.find(c => c.id === settings.last && c.turns.length);
   $('#noteCount').textContent = notes.length ? notes.length : '';
   if (last) { state.chat = last; ui.chats(); ui.thread(); ui.title(); } else newChat();
   start(false);
 })();
 window.NC = { state, engine, settings, B, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
-  FEATURES, setPart, setParts, defaultParts, partsLabel, partsDiff, rerun, viewFrom, nudgeFor, startCoach, askCoach, coachPrompt, parseLoose, showParts, showRerun, showSettings, newChat };
+  FEATURES, setPart, setParts, defaultParts, partsLabel, partsDiff, rerun, viewFrom, nudgeFor, startCoach, askCoach, coachPrompt, parseLoose, showParts, showRerun, showSettings, newChat, saveChat, cleanSvg, speak, speakable, stopSpeaking, micToggle, tts, mic };
 </script>
 </body>
 </html>
