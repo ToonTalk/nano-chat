@@ -897,11 +897,13 @@ Which tool next?`;
   const d = await engine.askJSON(engine.router, prompt, schema, signal) || { tool: 'answer', input: '', title: '' };
   if (!tools.includes(d.tool)) d.tool = 'answer';
   if (F.nudges && d.tool === 'web_search' && !REQUEST.test(text) && text.split(/\s+/).length >= 8) d.tool = 'answer';      // a long statement with no question in it: the user was telling, not asking
+  if (F.nudges && d.tool === 'calculator' && !NUMBERISH.test(text) && !hintsFor(text).some(h => h.t === 'calculator')) d.tool = 'answer';      // nothing to work out: no number and no date question (seen when search was off and the chooser grabbed the calculator instead)
   if (F.nudges && d.tool === 'web_search' && MAKES.test(text) && MADE.test(text) && !hintsFor(text).some(h => h.t === 'web_search')) d.tool = 'answer';      // "create the SVG for a star", "write a poem": something to make, not to look up
   return d;
 }
 const SMALLTALK = /^(hi|hello|hey|yo|thanks|thank you|thx|ok|okay|yes|no|yep|nope|bye|goodbye|good (morning|afternoon|evening|night)|cool|great|nice|lol|wow|sure)\b[\s\S]{0,12}$/i;
 const REQUEST = /\?|\b(what|who|whom|whose|when|where|why|how|which|tell|find|search|look up|give|show|list|suggest|recommend|explain|describe|compare|check|name|define|is there|are there|can you|could you|would you|do you know|i need|i want|i'd like|i wonder|let me know|any idea|latest|news)\b/i;
+const NUMBERISH = /\d|\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|half|third|quarter|double|twice|dozen|percent|squared|cubed|today|tomorrow|yesterday|birthday|christmas|new year)\b/i;
 const MAKES = /^\s*((can|could|would|will) you\s+)?(please\s+)?(write|create|make|draw|generate|compose|code|design|build|give me)\b/i;
 const MADE = /\b(svg|html|css|javascript|python|code|program|function|script|regex|poem|story|song|joke|limerick|haiku|essay|drawing|picture|image|logo|icon)\b/i;
 const SLASH = { search: 'web_search', calc: 'calculator', note: 'save_note', recall: 'recall', read: 'read_note' };

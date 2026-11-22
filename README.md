@@ -121,6 +121,8 @@ parts were on, and Nano's reply) and it:
 - when a message has several answers, asks which you think is best, then comments on each
   one and says what the difference between them shows.
 
+![The coach comparing bare arithmetic with a second try that used the calculator](screenshots/coach.png)
+
 The coach never joins the chat, and Nano does not see what it says. It runs only when you
 ask, or after every reply, as you choose in Settings. It can be wrong too. It knows nothing
 recent unless you let it use its company's web search, which is charged per search.
