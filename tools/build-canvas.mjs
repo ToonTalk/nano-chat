@@ -8,10 +8,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const pieces = {};
-for (const part of fs.readFileSync(path.join(root, 'tools/canvas-parts.js'), 'utf8').split(/^\/\/#piece /m).slice(1)) {
+const read = f => fs.readFileSync(path.join(root, f), 'utf8').replace(/\r\n/g, '\n');   // a Windows checkout may have CRLF line ends
+for (const part of read('tools/canvas-parts.js').split(/^\/\/#piece /m).slice(1)) {
   const nl = part.indexOf('\n'); pieces[part.slice(0, nl).trim()] = part.slice(nl + 1).trimEnd() + '\n';
 }
-let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+let html = read('index.html');
 const swap = (what, from, to) => {
   const n = html.split(from).length - 1;
   if (n !== 1) throw new Error(`${what}: expected the text once, found it ${n} times:\n  ${from.slice(0, 120)}`);
