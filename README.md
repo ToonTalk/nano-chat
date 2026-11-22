@@ -103,17 +103,23 @@ Three things make the experiments quick:
 
 Each reply records which parts were on when it was written.
 
+Nano itself remembers only one answer to each message: the first, unless you choose
+"Continue the chat from this answer" on a later try.
+
 ## The coach (optional)
 
 With your own key for Claude, Gemini or ChatGPT, a stronger model can look over Nano's
-shoulder. It is sent what the glass box shows (your message, what the tools found, which
+shoulder. "Other" takes the address and model name of any service, or a program on your own
+computer such as Ollama, that speaks the OpenAI chat format. It is sent what the glass box shows (your message, what the tools found, which
 parts were on, and Nano's reply) and it:
 
 - asks what you think of the reply before it says anything;
 - gives a hint first when you missed a problem;
 - rates the reply, marks the words it objects to, and explains why the reply came out that
   way in terms of the parts;
-- suggests an experiment, with a button that runs it as a second try.
+- suggests an experiment, with a button that runs it as a second try;
+- when a message has several answers, asks which you think is best, then comments on each
+  one and says what the difference between them shows.
 
 The coach never joins the chat, and Nano does not see what it says. It runs only when you
 ask, or after every reply, as you choose in Settings. It can be wrong too. It knows nothing
@@ -150,6 +156,9 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   - `node tools/test-parts.mjs`: the switches, second tries, the bare start and the coach
     (add `memory` or `coach` to run only that section). The coach's three services are faked
     in this test, apart from a check that each can be reached from a page.
+  - `node tools/test-coach-live.mjs`: the coach with a real Claude key, read from the
+    `ANTHROPIC_API_KEY` environment variable (add `web` to try its web search too). It costs
+    a few cents a run. The key stays in the test process and is never put into the page.
   - `node tools/test-extras.mjs`: SVG pictures, saving a chat, and voice. Headless Chrome
     has no microphone or loudspeaker, so Chrome's speech recognition and speech output are
     replaced by stand-ins.

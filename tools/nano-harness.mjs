@@ -67,9 +67,10 @@ export async function launch({ root, width = 1180, height = 820, withModel = tru
   if (!target) throw new Error('Chrome did not start');
   const ws = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
-  let id = 0; const pending = new Map(); const log = []; const errors = [];
+  let id = 0; const pending = new Map(); const log = []; const errors = []; const listeners = {};
   ws.onmessage = ev => {
     const m = JSON.parse(ev.data);
+    if (m.method && listeners[m.method]) for (const fn of listeners[m.method]) fn(m.params);
     if (m.id && pending.has(m.id)) { const { res, rej } = pending.get(m.id); pending.delete(m.id); m.error ? rej(new Error(m.error.message)) : res(m.result); return; }
     if (m.method === 'Runtime.consoleAPICalled') log.push(`[${m.params.type}] ` + m.params.args.map(a => a.value ?? a.description ?? '').join(' '));
     if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
@@ -81,6 +82,7 @@ export async function launch({ root, width = 1180, height = 820, withModel = tru
   const base = `http://127.0.0.1:${webPort}`;
   const api = {
     base, log, errors, send,
+    on(method, fn) { (listeners[method] ||= []).push(fn); },      // listen for a DevTools event, such as Runtime.bindingCalled
     async goto(p) { await send('Page.navigate', { url: base + p }); await new Promise(r => setTimeout(r, 600)); },
     // Evaluates an expression (may be async); returns its JSON-serializable value.
     async eval(expression, { userGesture = true } = {}) {

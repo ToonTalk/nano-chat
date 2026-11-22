@@ -145,6 +145,8 @@ details.svgcode { margin: .2em 0 .7em; } details.svgcode summary { cursor: point
 .coach { margin-top: 10px; border: 1px solid var(--line); border-left: 3px solid #7c6fd6; border-radius: 12px; padding: 10px 12px; font-size: 14.5px; background: var(--panel); }
 .coach .who { font-weight: 600; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
 .coach summary { cursor: pointer; color: var(--muted); font-size: 13.5px; margin-top: 6px; } .coach ul { margin: 8px 0; padding-left: 1.3em; } .coach p { margin: 6px 0; }
+.cnote { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 13.5px; }
+.coach .tools .sub { margin: 0; }
 .coach q { font-style: italic; } .coach .said { color: var(--muted); margin-bottom: 4px; } .coach .sub { color: var(--muted); font-size: 12.5px; }
 .badge { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 600; margin-right: 6px; background: var(--chip); color: var(--muted); }
 .badge.good { background: #d1fae5; color: #065f46; } .badge.minor { background: #fef3c7; color: #92400e; } .badge.wrong { background: #fee2e2; color: #991b1b; }
@@ -1045,6 +1047,7 @@ async function rerun(botId, F, times = 1) {
   }
   await db.put(chat).catch(console.warn);
   state.busy = false; state.abort = null; ui.busy(); ui.bot(bot.id);
+  if (settings.coach.mode === 'every' && coachReady() && coachTries(bot).length) startCoach(chat, bot, true);
 }
 // ───────────────────────────── the coach (optional) ─────────────────────────────
 // A stronger model, reached with the user's own key, that looks over Nano's shoulder. It never takes part in the
@@ -1055,9 +1058,13 @@ const COACHES = {
   gemini: { name: 'Gemini', model: 'gemini-3.8-flash', models: ['gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-3.5-flash-lite'], keyUrl: 'https://aistudio.google.com/app/apikey' },
   openai: { name: 'ChatGPT', model: 'gpt-6.1-sol', models: ['gpt-6.1-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-6-luna'], keyUrl: 'https://platform.openai.com/api-keys' },
 };
+// "Other" is any service, or a program on this computer, that speaks the OpenAI chat format: the user types its address and model.
+COACHES.other = { name: 'Other', model: '', models: [], custom: true };
 const coachKey = () => (settings.coach.keys[settings.coach.provider] || '').trim();
-const coachReady = () => settings.coach.mode !== 'off' && !!coachKey();
 const coachModel = () => (settings.coach.models[settings.coach.provider] || '').trim() || COACHES[settings.coach.provider].model;
+const coachUrl = () => { const b = (settings.coach.url || '').trim().replace(/\/+$/, ''); return !b ? '' : /\/chat\/completions$/.test(b) ? b : b + '/chat/completions'; };
+const coachReady = () => settings.coach.mode !== 'off' && (COACHES[settings.coach.provider].custom ? !!coachUrl() && !!coachModel() : !!coachKey());
+const coachName = () => COACHES[settings.coach.provider].custom ? host(coachUrl()) : COACHES[settings.coach.provider].name;
 const COACH_SYS = `You are the coach in Nano Chat, a teaching tool. A learner is chatting with Gemini Nano, a small language model that runs inside their browser. The page adds parts around the model (instructions, a calculator, web search, notes, a contents list for long conversations, and so on), and the learner can switch each part on or off to see what it contributes. Your job is to help the learner judge one reply from Nano and understand why it came out the way it did.
 
 Check the reply carefully: its facts, its arithmetic, whether it answers what was asked, whether it invents anything, and whether it agrees with the material the page handed to the model. The model's own knowledge is old, and yours may be too for very recent events, so when you cannot verify something, say so and use the verdict "unsure" instead of guessing.
@@ -1074,11 +1081,19 @@ Reply with one JSON object and nothing else:
   "experiment": "one concrete thing the learner could try next to see a difference",
   "part": "the key of the one part whose switch would most likely change the result, or an empty string"
 }
-"good" means correct and helpful. "minor" means mostly right with a small slip. "wrong" means a real error, something made up, or not an answer. Give at most four problems, and none when the verdict is good.`;
+"good" means correct and helpful. "minor" means mostly right with a small slip. "wrong" means a real error, something made up, or not an answer. Give at most four problems, and none when the verdict is good.
+
+Sometimes the learner has run the same message several times, with different parts switched on, to compare. The answers are then listed as ANSWER 1, ANSWER 2 and so on. In that case add three more fields, and let "summary" sum up the whole set:
+  "answers": [{ "n": 1, "verdict": "good" | "minor" | "wrong" | "unsure", "note": "one sentence on this answer" }, ...one for every answer],
+  "best": the number of the best answer, or 0 when none is clearly better than the others,
+  "compare": "one or two sentences on what the difference between the answers shows: which part made the difference, or that the answers differ only by chance"
+Then "verdict" is your verdict on ANSWER 1, and each problem also carries "n", the number of the answer its quote comes from.`;
 function coachPrompt(chat, bot) {
   const i = chat.turns.indexOf(bot), user = chat.turns[i - 1], f = bot.f || defaultParts(true), flat = s => (s || '').replace(/\s+\n/g, '\n').trim();
   const steps = a => (a.steps || []).map(s => `- ${s.tool} "${s.input}" (${s.status === 'ok' ? 'worked' : 'failed: ' + (s.error || '')})${s.how ? '; ' + s.how : ''}${s.evidence ? '\n' + clip(s.evidence, 3500) : ''}`).join('\n');
-  const before = chat.turns.slice(Math.max(0, i - 7), i - 1).map(t => `${t.role === 'user' ? 'Learner' : 'Nano'}: ${clip(flat(t.text), 700)}`).join('\n');
+  const before = chat.turns.slice(Math.max(0, i - 7), i - 1).map(t => `${t.role === 'user' ? 'Learner' : 'Nano'}: ${clip(flat(t.text), 700)}`).join('\n'), tries = coachTries(bot);
+  const about = a => (steps(a) || 'Nothing. The model answered from its own memory.') + (a.byPage ? '\n(This reply was written by the page itself, not by the model.)' : '') + (a.note ? '\n(' + a.note + ')' : '');
+  const said = (a, max) => (clip(flat(a.text), max) || '(empty)') + (a.stopped ? '\n(The learner stopped it before it finished.)' : '') + (a.check ? `\n(Nano's own second look at this reply: ${a.check.ok ? 'it saw no problem.' : 'it saw a problem: ' + a.check.note})` : '');
   return `Today's date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 
 THE PARTS (key, name, whether it was on for this reply, and what it does when on)
@@ -1090,14 +1105,21 @@ ${before || '(this was the first message)'}
 THE LEARNER'S MESSAGE
 ${clip(flat(user.text), 3000)}${(user.atts || []).length ? `\n(with an attached text: ${user.atts.map(a => `"${a.name}", ${a.text.length} characters`).join('; ')})` : ''}
 
-WHAT THE PAGE HANDED TO THE MODEL FOR THIS MESSAGE
-${steps(bot) || 'Nothing. The model answered from its own memory.'}${bot.byPage ? '\n(This reply was written by the page itself, not by the model.)' : ''}${bot.note ? '\n(' + bot.note + ')' : ''}
+${tries.length ? `THE LEARNER RAN THIS MESSAGE ${tries.length + 1} TIMES, to compare. Each answer follows, with what was different about it.
+
+${[bot, ...tries].map((a, k) => `ANSWER ${k + 1}: ${k ? `a later try (${partsDiff(f, a.f)}, compared with answer 1)` : `the first answer (${partsLabel(f)})`}\nWhat the page handed to the model:\n${about(a)}\nThe reply:\n${said(a, 3500)}`).join('\n\n')}
+
+Judge every answer, and answer with the JSON object, including "answers", "best" and "compare".`
+    : `WHAT THE PAGE HANDED TO THE MODEL FOR THIS MESSAGE
+${about(bot)}
 
 NANO'S REPLY
-${clip(flat(bot.text), 6000) || '(empty)'}${bot.stopped ? '\n(The learner stopped it before it finished.)' : ''}
-${bot.check ? `\nNANO'S OWN SECOND LOOK AT ITS REPLY\n${bot.check.ok ? 'It saw no problem.' : 'It saw a problem: ' + bot.check.note}\n` : ''}${(bot.variants || []).filter(v => v.text).length ? `\nOTHER TRIES OF THE SAME MESSAGE (the learner ran it again with different parts)\n${bot.variants.filter(v => v.text).map((v, k) => `Try ${k + 2} (${partsDiff(f, v.f)}):\n${steps(v) ? steps(v) + '\n' : ''}Reply: ${clip(flat(v.text), 2000)}`).join('\n\n')}\n` : ''}
-Judge NANO'S REPLY (the first one) and answer with the JSON object.`;
+${said(bot, 6000)}
+
+Judge NANO'S REPLY and answer with the JSON object.`}`;
 }
+// The answers the coach is asked about: the first one, and every finished second try.
+const coachTries = bot => (bot.variants || []).filter(v => v.text && v.ms != null);
 async function coachFetch(url, headers, body, signal) {
   let r, j = null;
   try { r = await fetch(url, { method: 'POST', signal, headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) }); j = await r.json().catch(() => null); }
@@ -1111,7 +1133,11 @@ async function coachFetch(url, headers, body, signal) {
 }
 // One question to the coach's model. Each company's API is called straight from this page with the user's key.
 async function askCoach(system, prompt, signal) {
-  const c = settings.coach, key = coachKey(), model = coachModel(), web = !!c.search;
+  const c = settings.coach, key = coachKey(), model = coachModel(), web = !!c.search && !COACHES[c.provider].custom;
+  if (c.provider === 'other') {
+    const j = await coachFetch(coachUrl(), key ? { Authorization: 'Bearer ' + key } : {}, { model, messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }] }, signal);
+    return String((((j.choices || [])[0] || {}).message || {}).content || '');
+  }
   if (c.provider === 'anthropic') {
     const newer = /^claude-(fable|mythos|opus-5|sonnet-5-5)/.test(model);
     const headers = { 'x-api-key': key, 'anthropic-version': '2026-10-21', 'anthropic-dangerous-direct-browser-access': 'true' };
@@ -1153,12 +1179,16 @@ function parseLoose(text) {
 async function startCoach(chat, bot, again) {
   if (!coachReady() || (bot.coach && bot.coach.state === 'loading')) return;
   const str = v => typeof v === 'string' ? v.trim() : '', show = () => { if (state.chat === chat) ui.bot(bot.id); };
-  const c = bot.coach = { state: 'loading', guess: !settings.coach.quiz ? 'skip' : again && bot.coach ? bot.coach.guess : null, by: `${COACHES[settings.coach.provider].name} (${coachModel()})`, web: !!settings.coach.search };
+  const n = coachTries(bot).length + 1, old = bot.coach, verdicts = ['good', 'minor', 'wrong', 'unsure'];
+  // Asked again about the same answers, the learner's earlier guess stands. With new answers to compare, the question is a new one.
+  const c = bot.coach = { state: 'loading', n, guess: !settings.coach.quiz ? 'skip' : again && old && old.n === n ? old.guess : null, by: `${coachName()} (${coachModel()})`, web: !!settings.coach.search && !COACHES[settings.coach.provider].custom };
   show();
   try {
     const r = parseLoose(await askCoach(COACH_SYS, coachPrompt(chat, bot)));
-    Object.assign(c, { state: 'done', verdict: ['good', 'minor', 'wrong', 'unsure'].includes(r.verdict) ? r.verdict : 'unsure', summary: str(r.summary), hint: str(r.hint), cause: str(r.cause), experiment: str(r.experiment), part: PART[r.part] ? r.part : '',
-      problems: (Array.isArray(r.problems) ? r.problems : []).slice(0, 4).map(p => ({ quote: str(p && p.quote), why: str(p && p.why) })).filter(p => p.why) });
+    Object.assign(c, { state: 'done', verdict: verdicts.includes(r.verdict) ? r.verdict : 'unsure', summary: str(r.summary), hint: str(r.hint), cause: str(r.cause), experiment: str(r.experiment), part: PART[r.part] ? r.part : '',
+      problems: (Array.isArray(r.problems) ? r.problems : []).slice(0, 6).map(p => ({ n: Math.min(n, Math.max(1, +(p && p.n) || 1)), quote: str(p && p.quote), why: str(p && p.why) })).filter(p => p.why),
+      answers: n > 1 ? Array.from({ length: n }, (x, k) => { const a = (Array.isArray(r.answers) ? r.answers : []).find(a => a && +a.n === k + 1) || {}; return { verdict: verdicts.includes(a.verdict) ? a.verdict : k ? '' : (verdicts.includes(r.verdict) ? r.verdict : ''), note: str(a.note) }; }) : [],
+      best: n > 1 && +r.best >= 1 && +r.best <= n ? +r.best : 0, compare: n > 1 ? str(r.compare) : '' });
   } catch (e) { console.warn(e); c.state = 'error'; c.error = e.message || String(e); }
   db.put(chat).catch(console.warn); show();
 }
@@ -1180,7 +1210,7 @@ const STEP_ICON = { calculator: '🧮', web_search: '🔎', save_note: '📒', r
 const ui = {
   hint(t) {
     $('#hint').textContent = t || 'Runs on this computer with Gemini Nano. It is a small model and can be wrong.' +
-      (coachReady() ? ` Coach on: ${COACHES[settings.coach.provider].name} is sent ${settings.coach.mode === 'every' ? 'every reply' : 'the replies you ask it about'}.` : '');
+      (coachReady() ? ` Coach on: ${coachName()} is sent ${settings.coach.mode === 'every' ? 'every reply' : 'the replies you ask it about'}.` : '');
   },
   parts() { const n = partsOn(), all = n === CORE.length; $('#partsCount').textContent = `${n}/${CORE.length}`; $('#openParts').classList.toggle('partial', !all); ui.hint(); },
   busy() {
@@ -1265,39 +1295,62 @@ function markQuotes(root, quotes) {
     }
   }
 }
-const coachShown = c => c && c.state === 'done' && c.guess != null && (c.shown || c.guess === 'off' || c.guess === 'skip' || c.verdict === 'good' || c.verdict === 'unsure');
+// With one answer the coach's view waits behind a hint when the learner missed a problem. With several answers to compare, it is shown once the learner has said which they think is best.
+const coachShown = c => c && c.state === 'done' && c.guess != null && (c.n > 1 || c.shown || c.guess === 'off' || c.guess === 'skip' || c.verdict === 'good' || c.verdict === 'unsure');
+const ansLabel = (k, cap) => k ? `Try ${k + 1}` : cap ? 'The first answer' : 'the first answer';
+const BADGE = { good: 'Looks good', minor: 'Mostly right', wrong: 'Has a problem', unsure: 'Cannot be sure' };
 function coachNode(t) {
   const c = t.coach; if (!c) return null;
-  const chat = state.chat, redraw = () => { ui.bot(t.id); db.put(chat).catch(console.warn); };
+  const chat = state.chat, redraw = () => { ui.bot(t.id); db.put(chat).catch(console.warn); }, now = coachTries(t).length + 1, many = c.n > 1;
   const box = (...kids) => el('div', { class: 'coach' }, el('div', { class: 'who' }, '🎓 Coach'), kids), btn = (label, fn) => el('button', { class: 'plain sm', onclick: fn }, label);
-  if (c.guess == null) return box(el('div', null, 'Before the coach says anything: what do you think of this reply?'),
-    el('div', { class: 'tools' }, [['right', 'Looks right'], ['off', 'Something is off'], ['unsure', 'Not sure']].map(([g, label]) => btn(label, () => { c.guess = g; redraw(); }))));
-  if (c.state === 'loading') return box(el('div', { class: 'status' }, el('span', { class: 'spin' }), 'The coach is reading the reply…'));
+  // The coach judged the answers that existed when it was asked. After another try, it has to be asked again.
+  const stale = now !== c.n && c.state !== 'loading' ? el('div', { class: 'tools' }, el('span', { class: 'sub' }, now > c.n ? 'The coach has not seen the newest try.' : 'This was about answers that have since changed.'),
+    coachReady() ? btn(now > 1 ? `Ask the coach about all ${now} answers` : 'Ask the coach again', () => startCoach(chat, t, true)) : null) : null;
+  if (c.guess == null) return box(el('div', null, many ? 'Before the coach says anything: which answer do you think is best?' : 'Before the coach says anything: what do you think of this reply?'),
+    el('div', { class: 'tools' }, (many ? [...Array.from({ length: c.n }, (x, k) => ['a' + (k + 1), ansLabel(k, true)]), ['unsure', 'Not sure']] : [['right', 'Looks right'], ['off', 'Something is off'], ['unsure', 'Not sure']]).map(([g, label]) => btn(label, () => { c.guess = g; redraw(); }))));
+  if (c.state === 'loading') return box(el('div', { class: 'status' }, el('span', { class: 'spin' }), many ? `The coach is reading all ${c.n} answers…` : 'The coach is reading the reply…'));
   if (c.state === 'error') return box(el('div', null, `The coach could not answer: ${c.error}.`), el('div', { class: 'tools' }, btn('Ask again', () => startCoach(chat, t, true))));
   const flawed = c.verdict === 'wrong' || c.verdict === 'minor';
   if (!coachShown(c)) return box(el('div', null, c.guess === 'right' ? 'You said it looks right. The coach is not so sure.' : 'The coach sees something worth a closer look.'),
     c.hint ? el('p', null, el('b', null, 'A hint: '), c.hint) : null, el('div', { class: 'tools' }, btn('Show what the coach found', () => { c.shown = true; redraw(); })));
-  const said = c.guess === 'right' ? (flawed ? '' : c.verdict === 'good' ? 'You said it looks right, and the coach agrees.' : '')
+  const pick = /^a\d+$/.test(c.guess || '') ? +c.guess.slice(1) : 0;
+  const said = many ? (!c.best ? (pick ? `You picked ${ansLabel(pick - 1)}. ` : '') + 'The coach does not think one answer is clearly better than the others.'
+      : pick === c.best ? `You picked ${ansLabel(pick - 1)}, and the coach agrees.` : (pick ? `You picked ${ansLabel(pick - 1)}. ` : '') + `The coach thinks ${ansLabel(c.best - 1)} is the best.`)
+    : c.guess === 'right' ? (flawed ? '' : c.verdict === 'good' ? 'You said it looks right, and the coach agrees.' : '')
     : c.guess === 'off' ? (flawed ? 'You thought something was off, and the coach agrees.' : c.verdict === 'good' ? 'You thought something was off. The coach found no problem. Do its reasons convince you?' : '') : '';
   const f = t.f || defaultParts(true), k = c.part;
   return box(said ? el('div', { class: 'said' }, said) : null,
-    el('div', null, el('span', { class: 'badge ' + c.verdict }, { good: 'Looks good', minor: 'Mostly right', wrong: 'Has a problem', unsure: 'Cannot be sure' }[c.verdict]), c.summary),
+    many ? el('div', null, c.compare || c.summary) : el('div', null, el('span', { class: 'badge ' + c.verdict }, BADGE[c.verdict]), c.summary),
     el('details', { 'data-k': 'coach' }, el('summary', null, 'Why, and what to try'),
-      c.problems.length ? el('ul', null, c.problems.map(p => el('li', null, p.quote ? el('q', null, p.quote) : null, p.quote ? ' ' : null, p.why))) : null,
+      many && c.compare && c.summary ? el('p', null, c.summary) : null,
+      c.problems.length ? el('ul', null, c.problems.map(p => el('li', null, many ? el('b', null, ansLabel(p.n - 1, true) + ': ') : null, p.quote ? el('q', null, p.quote) : null, p.quote ? ' ' : null, p.why))) : null,
       c.cause ? el('p', null, el('b', null, 'Why it came out this way: '), c.cause) : null,
       c.experiment ? el('p', null, el('b', null, 'Try next: '), c.experiment) : null,
       k ? el('div', { class: 'tools' }, btn(`Try again with ${PART[k].name} ${f[k] ? 'off' : 'on'}`, () => rerun(t.id, { ...f, [k]: !f[k] }))) : null,
-      el('p', { class: 'sub' }, `A second opinion from ${c.by}${c.web ? ', which could search the web' : ''}. It can be wrong too.`)));
+      el('p', { class: 'sub' }, `A second opinion from ${c.by}${c.web ? ', which could search the web' : ''}. It can be wrong too.`)),
+    stale);
+}
+// A second try can take the first answer's place in the conversation. Nano only ever remembers one answer per message: this one.
+const SWAPPED = ['text', 'steps', 'sources', 'f', 'note', 'check', 'byPage', 'stopped', 'error', 'ms'];
+function keepAnswer(t, v) {
+  if (state.busy) return;
+  for (const k of SWAPPED) { const a = t[k]; if (v[k] === undefined) delete t[k]; else t[k] = v[k]; if (a === undefined) delete v[k]; else v[k] = a; }
+  delete t.coach; engine.dirty = true; ui.bot(t.id); ui.meter(); db.put(state.chat).catch(console.warn);
 }
 function botNode(t, i) {
-  const chat = state.chat, done = t.ms != null && !t.phase, f = t.f || defaultParts(true), kids = [];
+  const chat = state.chat, done = t.ms != null && !t.phase, f = t.f || defaultParts(true), kids = [], c = t.coach, judged = [t, ...coachTries(t)];
+  const shown = coachShown(c) && judged.length === c.n;
+  // What the coach said about one of several answers, shown inside that answer's card.
+  const verdictOn = a => { const k = judged.indexOf(a), v = shown && c.n > 1 && k >= 0 && c.answers && c.answers[k]; return v && (v.verdict || v.note) ? el('div', { class: 'cnote' }, v.verdict ? el('span', { class: 'badge ' + v.verdict }, BADGE[v.verdict]) : null, c.best === k + 1 ? el('span', { class: 'badge good' }, 'The coach’s pick') : null, v.note) : null; };
   if ((t.variants || []).length) {
     kids.push(el('div', { class: 'cmp' },
-      el('div', { class: 'card' }, el('div', { class: 'cap' }, el('b', null, 'First answer'), el('span', null, partsLabel(f))), replyParts(t)),
+      el('div', { class: 'card' }, el('div', { class: 'cap' }, el('b', null, 'First answer'), el('span', null, partsLabel(f))), replyParts(t), verdictOn(t)),
       t.variants.map((v, k) => el('div', { class: 'card' },
         el('div', { class: 'cap' }, el('b', null, `Try ${k + 2}`), el('span', null, partsDiff(f, v.f)), v.ms != null ? el('button', { title: 'Remove this try', onclick: () => { t.variants = t.variants.filter(x => x !== v); ui.bot(t.id); db.put(chat).catch(console.warn); } }, '✕') : null),
-        replyParts(v),
-        v.ms != null && FEATURES.some(p => !!v.f[p.k] !== !!settings.features[p.k]) ? el('div', { class: 'tools' }, el('button', { class: 'tool', onclick: () => setParts(v.f) }, 'Use these parts from now on')) : null))));
+        replyParts(v), verdictOn(v),
+        v.ms != null ? el('div', { class: 'tools' },
+          v.text ? el('button', { class: 'tool', title: 'Nano remembers only one answer to each message. This makes it this one, and the first answer becomes the try.', onclick: () => keepAnswer(t, v) }, 'Continue the chat from this answer') : null,
+          FEATURES.some(p => !!v.f[p.k] !== !!settings.features[p.k]) ? el('button', { class: 'tool', onclick: () => setParts(v.f) }, 'Use these parts from now on') : null) : null))));
   } else {
     kids.push(replyParts(t));
     if (done && partsOn(f) < CORE.length) kids.push(el('div', { class: 'offs' }, 'For this reply: ' + partsLabel(f) + '.'));
@@ -1310,11 +1363,14 @@ function botNode(t, i) {
     kids.push(el('div', { class: 'tools' },
       i - 1 >= viewFrom(chat) ? el('button', { class: 'tool', title: 'Run this message again with other parts switched on, and compare', onclick: () => showRerun(t) }, '↻ Try again…') : null,
       canSpeak && t.text ? el('button', { class: 'tool', onclick: () => tts.id === t.id ? stopSpeaking() : speak(t) }, tts.id === t.id ? '⏹ Stop reading' : '🔊 Read aloud') : null,
-      coachReady() && !t.coach && t.text && !t.byPage ? el('button', { class: 'tool', onclick: () => startCoach(chat, t) }, '🎓 Ask the coach') : null));
+      coachReady() && !c && t.text && (!t.byPage || judged.length > 1) ? el('button', { class: 'tool', onclick: () => startCoach(chat, t) }, judged.length > 1 ? `🎓 Ask the coach about all ${judged.length} answers` : '🎓 Ask the coach') : null));
   }
   const n = el('div', { class: 'msg bot', id: 't-' + t.id }, kids);
   n.querySelectorAll('.svgview img').forEach(img => img.addEventListener('error', () => { img.parentNode.textContent = 'This SVG code could not be drawn.'; }));
-  if (coachShown(t.coach) && t.coach.problems.length) { const b = n.querySelector('.body'); if (b) markQuotes(b, t.coach.problems.map(p => p.quote)); }
+  if (shown && c.problems.length) {                // mark the quoted words in the answer each one came from
+    const cards = [...n.querySelectorAll('.cmp .card')];
+    judged.forEach((a, k) => { const home = cards.length ? cards[a === t ? 0 : 1 + t.variants.indexOf(a)] : n, b = home && home.querySelector('.body'); if (b) markQuotes(b, c.problems.filter(p => p.n === k + 1).map(p => p.quote)); });
+  }
   return n;
 }
 function replyParts(t) {
@@ -1466,18 +1522,23 @@ function showSettings() {
   const co = settings.coach, coachBox = el('div'), saveCoach = () => { saveSettings(); ui.hint(); if (!state.busy) ui.thread(); };
   const drawCoach = () => {
     coachBox.textContent = ''; if (co.mode === 'off') return;
-    const p = COACHES[co.provider];
-    coachBox.append(
+    const p = COACHES[co.provider], cur = (co.models[co.provider] || '').trim(), typed = p.custom || (!!cur && !p.models.includes(cur)) || co.otherModel === co.provider;
+    const modelBox = el('input', { type: 'text', id: 'coachModel', value: cur, placeholder: p.custom ? 'The model’s name, as that service writes it' : 'Type the model’s name', autocomplete: 'off', style: p.custom ? '' : 'margin-top:6px', oninput: e => { co.models[co.provider] = e.target.value.trim(); saveCoach(); } });
+    coachBox.append(...[
       el('label', { for: 'coachProv' }, 'Which AI is the coach'),
-      el('select', { id: 'coachProv', onchange: e => { co.provider = e.target.value; saveCoach(); drawCoach(); } }, Object.entries(COACHES).map(([id, x]) => el('option', { value: id, selected: co.provider === id }, x.name))),
-      el('label', { for: 'coachKey' }, `Your ${p.name} key`),
+      el('select', { id: 'coachProv', onchange: e => { co.provider = e.target.value; saveCoach(); drawCoach(); } }, Object.entries(COACHES).map(([id, x]) => el('option', { value: id, selected: co.provider === id }, x.custom ? 'Other: I’ll type its address' : x.name))),
+      p.custom ? [el('label', { for: 'coachUrl' }, 'Its address'),
+        el('input', { type: 'text', id: 'coachUrl', value: co.url || '', placeholder: 'https://openrouter.ai/api/v1', autocomplete: 'off', oninput: e => { co.url = e.target.value.trim(); saveCoach(); } }),
+        el('p', { class: 'sub', style: 'margin-top:6px' }, 'Any service, or a program on this computer, that speaks the OpenAI chat format. For example OpenRouter, or Ollama at http://localhost:11434/v1. It has to accept requests from web pages.')] : null,
+      el('label', { for: 'coachKey' }, p.custom ? 'Its key, if it needs one' : `Your ${p.name} key`),
       el('input', { type: 'password', id: 'coachKey', value: co.keys[co.provider] || '', placeholder: 'Paste the key here', autocomplete: 'off', oninput: e => { co.keys[co.provider] = e.target.value.trim(); saveCoach(); } }),
-      el('p', { class: 'sub', style: 'margin-top:6px' }, 'The key is stored only in this browser and sent only to that company. You can get one at ', el('a', { href: p.keyUrl, target: '_blank', rel: 'noopener' }, host(p.keyUrl)), '. Each review is charged to your key.'),
-      el('label', { for: 'coachModel' }, 'Model'),
-      el('input', { type: 'text', id: 'coachModel', list: 'coachModels', value: co.models[co.provider] || '', placeholder: p.model, autocomplete: 'off', oninput: e => { co.models[co.provider] = e.target.value.trim(); saveCoach(); } }),
-      el('datalist', { id: 'coachModels' }, p.models.map(m => el('option', { value: m }))),
+      el('p', { class: 'sub', style: 'margin-top:6px' }, p.custom ? 'The key is stored only in this browser and sent only to that address.' : ['The key is stored only in this browser and sent only to that company. You can get one at ', el('a', { href: p.keyUrl, target: '_blank', rel: 'noopener' }, host(p.keyUrl)), '. Each review is charged to your key.']),
+      el('label', { for: p.custom ? 'coachModel' : 'coachModelSel' }, 'Model'),
+      p.custom ? null : el('select', { id: 'coachModelSel', onchange: e => { if (e.target.value === '*') { co.otherModel = co.provider; } else { co.otherModel = ''; co.models[co.provider] = e.target.value === p.model ? '' : e.target.value; } saveCoach(); drawCoach(); if (e.target.value === '*') $('#coachModel').focus(); } },
+        p.models.map(m => el('option', { value: m, selected: !typed && (cur || p.model) === m }, m + (m === p.model ? ' (suggested)' : ''))), el('option', { value: '*', selected: typed }, 'Other: I’ll type its name')),
+      typed ? modelBox : null,
       el('label', { class: 'radio', style: 'margin-top:10px' }, el('input', { type: 'checkbox', checked: !!co.quiz, onchange: e => { co.quiz = e.target.checked; saveCoach(); } }), el('span', null, 'Ask me what I think first', el('small', null, 'The coach waits for your own judgment of a reply before it shows its view.'))),
-      el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!co.search, onchange: e => { co.search = e.target.checked; saveCoach(); } }), el('span', null, 'Let the coach check facts on the web', el('small', null, 'Uses that company’s own web search, which is charged per search on top of the usual cost. Without it the coach knows nothing recent.'))));
+      p.custom ? null : el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!co.search, onchange: e => { co.search = e.target.checked; saveCoach(); } }), el('span', null, 'Let the coach check facts on the web', el('small', null, 'Uses that company’s own web search, which is charged per search on top of the usual cost. Without it the coach knows nothing recent.')))].flat(Infinity).filter(Boolean));
   };
   drawCoach();
   // Voice: speaking a message, and having replies read aloud.
@@ -1663,7 +1724,7 @@ async function start(byClick) {
   start(false);
 })();
 window.NC = { state, engine, settings, B, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
-  FEATURES, setPart, setParts, defaultParts, partsLabel, partsDiff, rerun, viewFrom, nudgeFor, startCoach, askCoach, coachPrompt, parseLoose, showParts, showRerun, showSettings, newChat, saveChat, cleanSvg, speak, speakable, stopSpeaking, micToggle, tts, mic };
+  FEATURES, setPart, setParts, defaultParts, partsLabel, partsDiff, rerun, viewFrom, nudgeFor, startCoach, askCoach, coachPrompt, parseLoose, showParts, showRerun, showSettings, newChat, keepAnswer, coachTries, saveChat, cleanSvg, speak, speakable, stopSpeaking, micToggle, tts, mic };
 </script>
 </body>
 </html>
