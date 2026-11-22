@@ -187,7 +187,12 @@ own, where Nano is allowed, and sends the coach's requests back through the Canv
 Tried on 22 November 2026 in Chrome 157: Nano answered in that tab, and the coach's review
 came back with no key.
 
-To try it: ask Gemini for any small HTML page in a Canvas, switch the Canvas to Code,
+**Try the shared copy:** https://share.gemini.google/6t1xfHuxq0CJ and choose "Open Nano
+Chat in its own tab". Keep the Gemini tab open, because the coach's requests go through it.
+The link is a snapshot made on 22 November 2026, so it can be older than the app. It has
+been tried only from the Google account that made it.
+
+To make your own: ask Gemini for any small HTML page in a Canvas, switch the Canvas to Code,
 replace the code with the file's contents, switch back to Preview, and choose "Open Nano
 Chat in its own tab". The 🧪 Frame check button reports what the frame allows. None of this
 is documented by Google, and it may stop working.
