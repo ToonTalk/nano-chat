@@ -67,7 +67,26 @@ try {
   await b.eval(`(document.querySelector('.msg.bot:last-child .coach details') || {}).open = true`);
   await b.screenshot(path.join(shots, 'coach-live-compare.png'), { h: 1100 });
 
+  // the learner's own view of a reply, then a conversation with the coach about it
+  await b.eval(`NC.setParts({ ...NC.defaultParts(true), calculator: false }); NC.newChat()`);
+  const again = await b.eval(`(async () => { await NC.send('What is 17.5% of 83,946.20?'); return NC.state.chat.turns.at(-1).text; })()`);
+  console.log('\n> What is 17.5% of 83,946.20?   (a new chat, calculator off)\n  ' + again.replace(/\n/g, '\n  ').slice(0, 300));
+  await b.eval(`NC.startCoach(NC.state.chat, NC.state.chat.turns.at(-1))`);
+  await b.waitFor(`(NC.state.chat.turns.at(-1).coach || {}).state !== 'loading'`, { timeout: 180000 });
+  const talkTo = async words => { await b.eval(`(() => { const t = NC.state.chat.turns.at(-1); if (!t.coach.talk) { t.coach.guess = 'own'; t.coach.view = ${JSON.stringify(words)}; } NC.coachSay(NC.state.chat, t, ${JSON.stringify(words)}); })()`); await b.waitFor(`!NC.state.chat.turns.at(-1).coach.busy`, { timeout: 180000 }); const m = await b.eval(`NC.state.chat.turns.at(-1).coach.talk.at(-1)`); console.log(`\n  You: ${words}\n  Coach: ${m.text.replace(/\n/g, '\n  ')}`); return m; };
+  let m = await talkTo('I think it is right, because Nano said it calculated it and the number looks about the right size.');
+  check('the coach answers the learner’s own view in plain sentences', !m.failed && m.text.length > 40 && !/^\s*\{/.test(m.text), m.text);
+  m = await talkTo('How could I check it myself without a calculator?');
+  check('and carries on the conversation', !m.failed && m.text.length > 40 && (await b.eval(`NC.state.chat.turns.at(-1).coach.talk.length`)) === 4, m.text);
+  await b.screenshot(path.join(shots, 'coach-live-talk.png'), { h: 1100 });
+
   if (web) {
+    // searching through the same key: Claude searches and reports, Nano writes the answer
+    await b.eval(`NC.settings.provider = 'ai'; NC.setParts(NC.defaultParts(true)); NC.newChat()`);
+    const sr = await b.eval(`(async () => { await NC.send('How long is the Forth Bridge in Scotland, and when did it open?'); const t = NC.state.chat.turns.at(-1); return { text: t.text, steps: t.steps.map(s => s.label + (s.how ? ' / ' + s.how : '')), sources: t.sources.map(s => s.url), ev: (t.steps.find(s => s.tool === 'web_search') || {}).evidence || '' }; })()`);
+    console.log('\n> How long is the Forth Bridge in Scotland, and when did it open?   (search through Claude)\n  ' + sr.steps.join('\n  ') + '\n  ' + sr.text.replace(/\n/g, '\n  ').slice(0, 400) + '\n  sources: ' + sr.sources.join(', ') + '\n  given to Nano: ' + sr.ev.replace(/\s+/g, ' ').slice(0, 500));
+    check('search through Claude brings back pages, and Nano answers from them', /through Claude/.test(sr.steps.join(' ')) && sr.sources.length > 0 && /1890/.test(sr.text), sr.steps.join('; '));
+    await b.eval(`NC.settings.provider = 'wikipedia'`);
     await b.eval(`NC.settings.coach.search = true; NC.setParts({ ...NC.defaultParts(true), search: false }); NC.newChat()`);
     const said = await b.eval(`(async () => { await NC.send('Who won the most recent men’s football World Cup, and in which year?'); return NC.state.chat.turns.at(-1).text; })()`);
     console.log('\n> Who won the most recent men’s football World Cup, and in which year?   (Nano’s web search off)\n  ' + said.replace(/\n/g, '\n  ').slice(0, 400));

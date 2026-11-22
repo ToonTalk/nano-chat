@@ -5,6 +5,11 @@ No account, no API key, and no other language model. Your conversations stay in 
 
 **Try it:** https://toontalk.github.io/nano-chat/
 
+- [Guide for students](https://toontalk.github.io/nano-chat/student-guide.html): seven experiments, starting from the bare model.
+- [Guide for teachers](https://toontalk.github.io/nano-chat/teacher-guide.html): what students can learn, what the computers need, a lesson outline.
+- [How it was made](https://toontalk.github.io/nano-chat/making-of.html): the account of building it with Claude, including what went wrong.
+- Ken Kahn's post: [Claude helped me make an app for exploring how to turn an LLM into a chatbot](https://docs.google.com/document/d/100TuZ1hSkCIE6gXLNsJulXOVqc7B5ghLfRsPteOIb-Y/edit?usp=sharing)
+
 ![Nano Chat answering with a calculator and a Wikipedia search](screenshots/search.png)
 
 ## What you need
@@ -27,7 +32,7 @@ Nano Chat does these jobs in the page instead.
 | Forgetting older messages | When the window fills, a side session writes a contents entry (title, topics, gist) for the oldest stretch. To look back, Nano picks a contents entry, or the page searches the transcript by keyword, or both (a setting). |
 | No tool calling | A separate small session chooses a tool as JSON. The page runs the tool and hands Nano the result along with your message. |
 | Weak arithmetic | A real calculator in the page, with percentages and date math. Plain arithmetic never goes to the model at all. |
-| No knowledge of recent events | Web search: Wikipedia with no key, or Tavily or Serper with your own key. Answers cite their sources. |
+| No knowledge of recent events | Web search: Wikipedia with no key; Tavily or Serper with your own key; or through Claude, Gemini or ChatGPT if you gave a key for the coach (that AI searches and reports what the pages say, and Nano still writes the answer). Answers cite their sources. |
 | Long documents | A pasted link, a long paste or an attached text file is searched for the relevant passages, or summarized in parts by side sessions. |
 | No memory between chats | Notes. Say "Remember that..." and it is saved in the browser and available in every chat. |
 
@@ -117,6 +122,8 @@ parts were on, and Nano's reply) and it:
 - gives a hint first when you missed a problem;
 - rates the reply, marks the words it objects to, and explains why the reply came out that
   way in terms of the parts;
+- takes your opinion in your own words as a fourth answer, and replies to what you wrote;
+- lets you go on talking with it about the reply;
 - suggests an experiment, with a button that runs it as a second try;
 - when a message has several answers, asks which you think is best, then comments on each
   one and says what the difference between them shows.

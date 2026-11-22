@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nano Chat: a guide for teachers</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%230f766e' d='M12 8h40a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H30L16 60V48h-4a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8z'/%3E%3Cpath fill='%23fff' d='M32 13l4.2 10.8L47 28l-10.8 4.2L32 43l-4.2-10.8L17 28l10.8-4.2z'/%3E%3C/svg%3E">
+<style>
+:root { --bg: #f7f6f3; --panel: #ffffff; --ink: #1f2328; --muted: #6b7280; --line: #dedbd3; --accent: #0f766e; --soft: #d9efec; --code: #f1efea; }
+@media (prefers-color-scheme: dark) { :root { --bg: #17191c; --panel: #1f2226; --ink: #e7e9ec; --muted: #9aa3ad; --line: #32363c; --accent: #2dd4bf; --soft: #143b37; --code: #262a2f; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+nav { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); font-size: 15px; }
+nav a { color: var(--muted); text-decoration: none; } nav a:hover, nav a.here { color: var(--ink); } nav .brand { font-weight: 650; color: var(--ink); margin-right: auto; }
+main { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
+h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; } h2 { font-size: 22px; margin: 38px 0 8px; } h3 { font-size: 18px; margin: 24px 0 4px; }
+.lead { font-size: 19px; color: var(--muted); margin: 0 0 22px; }
+a { color: var(--accent); } img { max-width: 100%; border: 1px solid var(--line); border-radius: 12px; display: block; margin: 14px 0; }
+code { background: var(--code); border-radius: 6px; padding: .1em .4em; font: .92em ui-monospace, Consolas, monospace; }
+.note { background: var(--soft); border-radius: 12px; padding: 10px 16px; margin: 16px 0; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 16px; } th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; } th { background: var(--panel); }
+.scroll { overflow-x: auto; }
+ol, ul { padding-left: 1.4em; } li { margin: 4px 0; }
+footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+</head>
+<body>
+<nav><a class="brand" href="./">Nano Chat</a><a href="student-guide.html">For students</a><a class="here" href="teacher-guide.html">For teachers</a><a href="making-of.html">How it was made</a><a href="https://github.com/ToonTalk/nano-chat">Code</a></nav>
+<main>
+<h1>Teaching with Nano Chat</h1>
+<p class="lead">A guide for teachers. Students take a chatbot apart, or build one up from a bare language model, and see for themselves which abilities belong to the model and which to the software around it.</p>
+
+<h2>The idea in one paragraph</h2>
+<p>Nano Chat is a chatbot whose model is Gemini Nano, the small language model built into Chrome. Every ability the page adds around that model is a <b>part</b> with a switch: instructions, today's date, a calculator, web search, notes, a contents list for long conversations, and more. With every part off, students meet a bare model. With all of them on, they have a working chatbot. Under any reply, "Try again…" reruns the same message with different parts and shows the answers side by side.</p>
+
+<h2>What students can learn</h2>
+<ul>
+  <li>A language model continues text. It has no clock, no calculator, no access to the web, and no memory of earlier chats unless software supplies them.</li>
+  <li>A model's fluency and confidence say nothing about whether it is right. Bare Nano states a wrong date, wrong sums and invented page contents in the same calm voice as true things.</li>
+  <li>A model can read only a limited amount at once. Long conversations work because software summarizes or drops the old parts.</li>
+  <li>Model output varies by chance, so a single trial is weak evidence. This is a natural place to practice fair testing.</li>
+  <li>Much of what makes a chatbot dependable is ordinary programming: a parser for arithmetic, a search request, rules of thumb.</li>
+</ul>
+
+<h2>Before the lesson</h2>
+<div class="note"><b>Check the computers first.</b> This is the main practical obstacle. Not every computer can run Chrome's built-in model.</div>
+<ul>
+  <li><b>Browser:</b> Chrome 148 or newer on Windows 10 or 11, macOS 13 or newer, or Linux. Ordinary Chromebooks cannot run it; a Chromebook Plus can. Phones and tablets cannot.</li>
+  <li><b>Hardware:</b> either a graphics card with more than 4 GB of its own memory, or 16 GB of RAM and at least 4 processor cores. Many budget laptops with 8 GB of RAM will not qualify.</li>
+  <li><b>Disk and download:</b> 22 GB of free disk space. On first use Chrome downloads the model, a few gigabytes, once for all sites. Do this before class, on each machine, on an unmetered connection.</li>
+  <li><b>Speed:</b> on the laptop it was built on, a plain reply took 1 to 3 seconds and a searched one 7 to 9. Slower machines will take longer.</li>
+  <li><b>If machines are short:</b> run it on one computer with a projector and let the class predict each result, or put students in groups around the machines that work.</li>
+</ul>
+<p>To test a machine, open <a href="./">Nano Chat</a>. If it cannot run, the page says so and lists what is needed.</p>
+
+<h2>Two ways in</h2>
+<div class="scroll"><table>
+<tr><th>Build it up</th><th>Take it apart</th></tr>
+<tr><td>Send students <a href="./?start=bare">the link that starts with every part off</a>. The welcome screen suggests things to try that bare Nano cannot do. After a weak answer the page offers to try again with the missing part, and shows both answers.</td><td>Start from <a href="./?start=full">everything on</a>. Students switch one part off, predict what will break, and test the prediction.</td></tr>
+<tr><td>Best for a first meeting with the idea. Each part arrives as the answer to a failure the student has just seen.</td><td>Best once students have the picture, and for more open investigation.</td></tr>
+</table></div>
+<p>The <a href="student-guide.html">student guide</a> walks through seven experiments the first way, then turns to the second.</p>
+
+<h2>A lesson outline (about 50 minutes)</h2>
+<ol>
+  <li><b>Predict (5 min).</b> Ask the class what a chatbot would do if you asked it today's date, a hard sum, and what is on a web page. Collect predictions.</li>
+  <li><b>Bare model (10 min).</b> Students open the bare link and try experiments 1 to 3 from the student guide. Insist that they judge each answer themselves before trying again.</li>
+  <li><b>Add parts (15 min).</b> Experiments 4 to 6, using "Try again with it on" and opening the tool chips to see what the model was handed.</li>
+  <li><b>Chance (5 min).</b> Everyone runs the sum three times with the calculator off. Compare wrong answers across the room. Why are they different?</li>
+  <li><b>Memory (10 min).</b> Experiment 7, with the small-memory switch, as a demonstration or in pairs.</li>
+  <li><b>Discuss (5 min).</b> Use the questions below.</li>
+</ol>
+
+<h2>Questions for discussion</h2>
+<ul>
+  <li>Which abilities did you think belonged to "the AI" that turned out to be ordinary software?</li>
+  <li>Bare Nano gave a date, a sum and a description of a web page it could not see. Why didn't it say "I don't know"? What changed when the Instructions part told it to say when it was unsure?</li>
+  <li>With web search on, the answer names its source. Does that make it right? How would you check?</li>
+  <li>The big commercial chatbots use far larger models. Which parts do they still need, and why?</li>
+  <li>A summary replaces old messages in a long conversation. What could go missing?</li>
+</ul>
+
+<h2>What to expect, honestly</h2>
+<ul>
+  <li><b>Results vary.</b> Chrome does not let a page fix the model's randomness. A probe that fails for most students may succeed for one. Treat that as data, and use "Run 3 times".</li>
+  <li><b>Bare Nano is better than you might expect at some things.</b> In testing it multiplied two four-digit numbers correctly by working step by step. It reliably got percentages and powers wrong, which is why the suggested sum is a percentage.</li>
+  <li><b>The complete chatbot is still a small model.</b> With every part on it can misread a search result or round a calculator's answer. That is worth discussing, not hiding.</li>
+  <li><b>English only.</b> The page asks Chrome for English input and output.</li>
+  <li><b>Chrome may change.</b> The model and its rules belong to Chrome and are updated by Google. In November 2026 the installed model called itself "Gemma" when given no instructions.</li>
+</ul>
+
+<h2>Privacy</h2>
+<ul>
+  <li>The model runs on the student's computer. Chats and notes are stored in that browser only. There are no accounts.</li>
+  <li>A web search sends the search words to Wikipedia. Reading a link fetches that page, through the <code>r.jina.ai</code> reader service when the site blocks direct reading; that can be switched off in Settings.</li>
+  <li>Voice input is off by default. When switched on, the page asks Chrome to recognize speech on the computer itself. Chrome's online recognition, which sends audio to Google, is a separate switch.</li>
+  <li>On a shared computer, the next student can see earlier chats and notes. Use the delete buttons, or separate browser profiles.</li>
+</ul>
+
+<h2>The optional coach</h2>
+<p>With an API key for Claude, Gemini or ChatGPT entered in Settings, a much stronger model reviews Nano's replies. It asks the student what they think first (three quick choices, or their own words), gives a hint if they missed a problem, then explains the reply in terms of the parts and suggests an experiment. The student can talk with it about the reply, and when there are several answers it comments on each. Nano never sees what the coach says.</p>
+<img src="screenshots/coach.png" alt="The coach comparing two answers to the same question, with a comment in each answer's card.">
+<ul>
+  <li><b>Cost:</b> each review is charged to the key. In our test with Claude Sonnet 5.5 in November 2026, a review used about 1,700 tokens in and 750 out, around one US cent. A review that used web search read 25,000 to 37,000 tokens, several cents.</li>
+  <li><b>Privacy:</b> each reviewed reply goes to that company, with the student's message, the few messages before it, and what the tools found. Decide whether that suits your setting before giving students a key.</li>
+  <li><b>Keys:</b> a key typed into Settings is stored in that browser. Do not leave a personal key on shared machines.</li>
+  <li><b>It can be wrong.</b> Without its web search switched on, it knows nothing recent.</li>
+</ul>
+<p>The lesson works without the coach. The side-by-side comparison does most of the teaching.</p>
+
+<h2>Going further</h2>
+<ul>
+  <li>Have students invent their own probe for a part and trade probes with another group.</li>
+  <li>Switch off "Rules of thumb" and count how often the model picks the wrong tool by itself.</li>
+  <li>Switch on "Second look" and tally how often a model catches its own errors.</li>
+  <li>Use the Save button to keep a chat as a web page for a report.</li>
+  <li>Read <a href="making-of.html">how it was made</a>: the page was built in conversation with an AI, and the account includes what went wrong.</li>
+</ul>
+
+<footer>Nano Chat is free and open source (MIT license). <a href="https://github.com/ToonTalk/nano-chat">Code and technical notes</a> · <a href="student-guide.html">Guide for students</a> · <a href="making-of.html">How it was made</a></footer>
+</main>
+</body>
+</html>

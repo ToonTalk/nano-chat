@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nano Chat: a guide for students</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%230f766e' d='M12 8h40a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H30L16 60V48h-4a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8z'/%3E%3Cpath fill='%23fff' d='M32 13l4.2 10.8L47 28l-10.8 4.2L32 43l-4.2-10.8L17 28l10.8-4.2z'/%3E%3C/svg%3E">
+<style>
+:root { --bg: #f7f6f3; --panel: #ffffff; --ink: #1f2328; --muted: #6b7280; --line: #dedbd3; --accent: #0f766e; --soft: #d9efec; --code: #f1efea; }
+@media (prefers-color-scheme: dark) { :root { --bg: #17191c; --panel: #1f2226; --ink: #e7e9ec; --muted: #9aa3ad; --line: #32363c; --accent: #2dd4bf; --soft: #143b37; --code: #262a2f; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+nav { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); font-size: 15px; }
+nav a { color: var(--muted); text-decoration: none; } nav a:hover, nav a.here { color: var(--ink); } nav .brand { font-weight: 650; color: var(--ink); margin-right: auto; }
+main { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
+h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; } h2 { font-size: 22px; margin: 38px 0 8px; } h3 { font-size: 18px; margin: 26px 0 4px; }
+.lead { font-size: 19px; color: var(--muted); margin: 0 0 22px; }
+a { color: var(--accent); } img { max-width: 100%; border: 1px solid var(--line); border-radius: 12px; display: block; margin: 14px 0; }
+code, .say { background: var(--code); border-radius: 6px; padding: .1em .4em; font: .92em ui-monospace, Consolas, monospace; }
+.say { display: inline-block; font-family: inherit; font-size: 1em; padding: .15em .6em; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 4px 18px 10px; margin: 16px 0; }
+.card h3 { margin-top: 14px; } .card p { margin: 6px 0; }
+.note { background: var(--soft); border-radius: 12px; padding: 10px 16px; margin: 16px 0; }
+.big { display: inline-block; background: var(--accent); color: var(--bg); font-weight: 600; text-decoration: none; border-radius: 12px; padding: 10px 20px; margin: 6px 0; }
+ol, ul { padding-left: 1.4em; } li { margin: 4px 0; }
+footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+</head>
+<body>
+<nav><a class="brand" href="./">Nano Chat</a><a class="here" href="student-guide.html">For students</a><a href="teacher-guide.html">For teachers</a><a href="making-of.html">How it was made</a><a href="https://github.com/ToonTalk/nano-chat">Code</a></nav>
+<main>
+<h1>What turns a language model into a chatbot?</h1>
+<p class="lead">A guide for students. You will start with a bare language model, find out what it cannot do, and add the missing parts one at a time.</p>
+
+<p>Chatbots like ChatGPT, Gemini and Claude feel like one clever thing. They are really two things: a <b>language model</b>, which continues a conversation with likely words, and a lot of ordinary <b>software around it</b>, which gives it a clock, a calculator, a way to look things up, and a memory.</p>
+<p>Nano Chat lets you take those two apart. Its model is Gemini Nano, a small one that runs inside Chrome on your own computer. Everything else is a <b>part</b> with a switch.</p>
+
+<p><a class="big" href="./?start=bare">Open Nano Chat with every part off</a></p>
+<div class="note">You need Chrome on a laptop or desktop computer. The first time, Chrome downloads the model, which takes a while. If the page says it needs Chrome's built-in AI, ask your teacher: not every computer can run it.</div>
+
+<h2>How to do each experiment</h2>
+<ol>
+  <li><b>Ask</b> the question with the part switched off.</li>
+  <li><b>Decide</b> for yourself whether the answer is right before you do anything else.</li>
+  <li><b>Try again</b> with the part on. The page offers this under the answer, and shows both answers side by side.</li>
+  <li><b>Say what changed</b>, and why you think it changed.</li>
+</ol>
+<img src="screenshots/compare.png" alt="Two answers to the same percentage question side by side: bare Nano gets it wrong, and a second try with the calculator part gets it right.">
+
+<h2>Seven experiments</h2>
+
+<div class="card">
+<h3>1. Who are you?</h3>
+<p>Ask: <span class="say">Who are you, and where are you running?</span></p>
+<p>The missing part is <b>Instructions</b>. A chatbot only knows its name, its job and its manners because the software tells it at the start of every conversation.</p>
+<p><i>Think about it:</i> the answer you got with the part off was confident. Was it true?</p>
+</div>
+
+<div class="card">
+<h3>2. What day is it?</h3>
+<p>Ask: <span class="say">What is the date today?</span></p>
+<p>The missing part is <b>Today's date</b>. A model is trained once and then frozen. It has no clock.</p>
+<p><i>Think about it:</i> where did the date it gave you come from?</p>
+</div>
+
+<div class="card">
+<h3>3. A sum</h3>
+<p>Ask: <span class="say">What is 17.5% of 83,946.20?</span></p>
+<p>The missing part is the <b>Calculator</b>. Work out the right answer yourself first (10% + 5% + 2.5%).</p>
+<p><i>Think about it:</i> the model writes out working that looks like a calculation. Is it calculating? Try the question three times ("Try again…", then "Run 3 times"). Do you get the same wrong answer each time?</p>
+</div>
+
+<div class="card">
+<h3>4. A fact</h3>
+<p>Ask: <span class="say">How long is the Forth Bridge in Scotland, and when did it open?</span></p>
+<p>The missing part is <b>Web search</b>. With it on, click the little chip above the answer to see exactly what the page handed to the model, and click the numbered source.</p>
+<p><i>Think about it:</i> without search, the model gave numbers anyway. How could you tell a remembered fact from an invented one?</p>
+</div>
+
+<div class="card">
+<h3>5. A link</h3>
+<p>Ask: <span class="say">What is this page about? https://en.wikipedia.org/?curid=376094</span></p>
+<p>The missing part is <b>Reading links</b>. The address gives no clue about what is on the page.</p>
+<p><i>Think about it:</i> the model cannot open links. Did it say so?</p>
+</div>
+
+<div class="card">
+<h3>6. Remembering you</h3>
+<p>Say: <span class="say">Remember that my bike lock code is 4821</span>. Then start a new chat and ask for the code.</p>
+<p>The missing part is <b>Notes</b>. A model does not learn from talking to you. Anything it "remembers" between chats was saved by the software and shown to it again.</p>
+</div>
+
+<div class="card">
+<h3>7. A long conversation</h3>
+<p>Open the Parts panel and switch on <b>Pretend Nano's memory is small</b>. Switch <b>Contents list</b> and <b>Looking back</b> off. Tell it something in your first message (where you are going on holiday, say). Then ask six or seven questions about other things, asking for about 150 words each time. Then ask about the first thing.</p>
+<p>A model can only read a limited amount at once. The <b>Memory</b> button at the top shows how full it is, and a line appears in the chat where the model's view now starts.</p>
+<p><i>Think about it:</i> switch <b>Contents list</b> on and keep chatting. What does the model get in place of the old messages? Is a summary as good as the real thing?</p>
+</div>
+
+<h2>Now go the other way</h2>
+<p>Choose <b>Everything on</b> in the Parts panel. Now it is a working chatbot. Pick one part, switch it off, and predict what will go wrong before you test it. Scientists call this an <i>ablation</i>: you learn what something does by taking it away.</p>
+<p>Two parts are worth a careful look:</p>
+<ul>
+  <li><b>Rules of thumb.</b> Simple rules written by a programmer help choose the right tool. With them off, the model chooses alone. Does it choose worse?</li>
+  <li><b>Second look.</b> A second copy of the model checks each answer. Does a model catch its own mistakes?</li>
+</ul>
+
+<h2>Three habits of a careful experimenter</h2>
+<ul>
+  <li><b>Run it more than once.</b> The model does not answer the same way twice. One try proves little.</li>
+  <li><b>Look inside.</b> Every tool chip opens to show what the model was given. The Memory button shows everything it can see.</li>
+  <li><b>Check the answer somewhere else.</b> A fluent answer and a correct answer look the same.</li>
+</ul>
+
+<h2>If there is a coach</h2>
+<p>Your teacher may have switched on the coach, a much bigger AI that looks over Nano's shoulder. It asks what you think of an answer before it tells you what it thinks. Take that seriously: your own judgment is the thing you are training. You can then talk with the coach about the answer. The coach can be wrong too.</p>
+<img src="screenshots/coach.png" alt="The coach comparing two answers, with a comment inside each answer's card and an explanation of what made the difference.">
+
+<h2>Questions to finish with</h2>
+<ol>
+  <li>Which part made the biggest difference? Which made the least?</li>
+  <li>Name something the chatbot got right that was really the page's work, not the model's.</li>
+  <li>The big chatbots use much larger models. Which of these parts do you think they still need?</li>
+  <li>When a chatbot tells you something, what would you want to see before you believe it?</li>
+</ol>
+
+<footer>Nano Chat is free and open source. Your chats stay in your browser. <a href="teacher-guide.html">Guide for teachers</a> · <a href="making-of.html">How it was made</a></footer>
+</main>
+</body>
+</html>

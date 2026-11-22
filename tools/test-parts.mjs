@@ -182,12 +182,15 @@ try {
       if (!/anthropic\\.com|googleapis\\.com|openai\\.com|example\\.test/.test(url)) return real(url, init);
       const body = JSON.parse(init.body), headers = init.headers; window.coachCalls.push({ url, headers, body });
       if (window.coachFail) return new Response(JSON.stringify({ error: { message: 'invalid x-api-key' } }), { status: 401 });
+      if (window.coachSlow) await new Promise(r => setTimeout(r, window.coachSlow));
+      const kind = /web search tool/.test(init.body) ? 'search' : /talking with you/.test(init.body) ? 'talk' : 'review';
       const reply = NC.state.chat.turns.at(-1).text, quote = (reply.match(/[\\d,]{5,}/) || [reply.slice(0, 12)])[0];
       const text = 'Here is my review.\\n\`\`\`json\\n' + JSON.stringify(window.coachGood ? { verdict: 'good', summary: 'This is right.', hint: '', problems: [], cause: 'The calculator did the sum.', experiment: 'Try a harder one.', part: '' } : (/ANSWER 2/.test(init.body) ? { ...verdict, problems: [{ n: 1, quote: '__QUOTE__', why: 'This number is not 4,387 × 291.' }], answers: [{ n: 1, verdict: 'wrong', note: 'The sum is wrong.' }, { n: 2, verdict: 'good', note: 'The calculator got it right.' }], best: 2, compare: 'The calculator made the difference.' } : verdict)).replace('__QUOTE__', quote) + '\\n\`\`\`';
       const json = /anthropic/.test(url) ? { stop_reason: 'end_turn', content: [{ type: 'thinking', thinking: '' }, { type: 'text', text }] }
         : /googleapis/.test(url) ? { candidates: [{ content: { parts: [{ text: 'thinking…', thought: true }, { text }] } }] }
         : /responses$/.test(url) ? { output: [{ type: 'web_search_call' }, { type: 'message', content: [{ type: 'output_text', text }] }] }
         : { choices: [{ message: { content: text } }] };
+      if (kind !== 'review') { const t = kind === 'talk' ? 'You are right that the number is off. What would a calculator say?' : JSON.stringify({ results: [{ title: 'Forth Bridge', url: 'https://example.org/forth-bridge', text: 'The Forth Bridge is a railway bridge in Scotland. It is 2,467 metres long and was opened on 4 March 1890.' }] }); return new Response(JSON.stringify({ stop_reason: 'end_turn', content: [{ type: 'text', text: t }] }), { status: 200, headers: { 'content-type': 'application/json' } }); }
       return new Response(JSON.stringify(json), { status: 200, headers: { 'content-type': 'application/json' } });
     };
   })()`);
@@ -196,7 +199,7 @@ try {
   await b.eval(`Object.assign(NC.settings.coach, { mode: 'ask', provider: 'anthropic', search: false, quiz: true, keys: { anthropic: 'k', gemini: 'k', openai: 'k' }, models: {} }); NC.ui.thread()`);
   check('with a key, each reply offers “Ask the coach”', await click('Ask the coach'));
   let s = await coachState();
-  check('the coach first asks what the learner thinks', /what do you think/i.test(s.text) && s.buttons.length === 3 && !/multiplication/.test(s.text), s.text);
+  check('the coach first asks what the learner thinks', /what do you think/i.test(s.text) && s.buttons.length === 4 && !/multiplication/.test(s.text), s.text);
   await click('Looks right');
   await b.waitFor(`NC.state.chat.turns.at(-1).coach.state === 'done'`, { timeout: 15000 });
   s = await coachState();
@@ -221,7 +224,7 @@ try {
   check('after a second try, the coach says it has not seen it and offers to look at both', /has not seen the newest try/.test(s.text) && s.buttons.some(x => /all 2 answers/.test(x)), s.text);
   await click('Ask the coach about all 2 answers');
   s = await coachState();
-  check('with several answers it first asks which one is best', /which answer do you think is best/.test(s.text) && s.buttons.join('|') === 'The first answer|Try 2|Not sure', s.buttons.join('|'));
+  check('with several answers it first asks which one is best', /which answer do you think is best/.test(s.text) && s.buttons.join('|') === 'The first answer|Try 2|Not sure|I’ll say what I think…', s.buttons.join('|'));
   await click('Try 2');
   await b.waitFor(`NC.state.chat.turns.at(-1).coach.state === 'done'`, { timeout: 15000 });
   s = await coachState();
@@ -250,10 +253,45 @@ try {
     s = await coachState(); const c = await b.eval(`window.coachCalls.at(-1)`);
     const shape = p === 'anthropic' ? c.body.tools && c.body.tools[0].type === 'web_search_20260209' && c.body.tools[0].name === 'web_search'
       : p === 'gemini' ? /generativelanguage\.googleapis\.com\/v1beta\/models\/gemini-3\.8-flash:generateContent$/.test(c.url) && c.headers['x-goog-api-key'] === 'k' && !!c.body.systemInstruction && (web ? c.body.tools[0].google_search && !c.body.generationConfig.responseMimeType : c.body.generationConfig.responseMimeType === 'application/json' && !c.body.tools)
-      : web ? c.url === 'https://api.openai.com/v1/responses' && c.body.tools[0].type === 'web_search' && typeof c.body.input === 'string' && c.headers.Authorization === 'Bearer k'
+      : web ? c.url === 'https://api.openai.com/v1/responses' && c.body.tools[0].type === 'web_search' && Array.isArray(c.body.input) && c.body.input[0].role === 'user' && c.headers.Authorization === 'Bearer k'
       : c.url === 'https://api.openai.com/v1/chat/completions' && c.body.messages.length === 2 && c.body.response_format.type === 'json_object' && c.body.model === 'gpt-6.1-sol';
     check(`“after every reply” with ${p}${web ? ' and web search' : ''}: asked without a click, shown at once when the quiz is off`, s.c && s.c.verdict === 'wrong' && /Has a problem/.test(s.text) && !!shape, J({ url: c.url, body: { ...c.body, system: undefined, messages: undefined, contents: undefined, input: undefined, instructions: undefined, systemInstruction: !!c.body.systemInstruction } }));
   }
+  // the learner's own words, and a conversation with the coach
+  await b.eval(`Object.assign(NC.settings.coach, { mode: 'ask', provider: 'anthropic', search: false, quiz: true }); window.coachGood = false; window.coachSlow = 1500; NC.setParts({ ...NC.defaultParts(true), calculator: false })`);
+  await fresh();
+  await ask('What is 6,113 × 427?');
+  await click('Ask the coach');
+  s = await coachState();
+  check('the coach’s question has a fourth choice, to say it in your own words', s.buttons.join('|') === 'Looks right|Something is off|Not sure|I’ll say what I think…', s.buttons.join('|'));
+  await click('I’ll say what I think');
+  await b.eval(`(() => { const x = document.querySelector('.msg.bot:last-child .coach textarea'); x.focus(); x.value = 'I think the last digits are wrong'; })()`);
+  await b.waitFor(`NC.state.chat.turns.at(-1).coach.state === 'done'`, { timeout: 15000 });
+  check('what is being typed survives the coach’s answer arriving', (await b.eval(`(document.querySelector('.msg.bot:last-child .coach textarea') || {}).value`)) === 'I think the last digits are wrong' && await b.eval(`document.activeElement === document.querySelector('.msg.bot:last-child .coach textarea')`));
+  await b.eval(`window.coachSlow = 0`);
+  await click('Tell the coach');
+  await b.waitFor(`(NC.state.chat.turns.at(-1).coach.talk || []).length === 2 && !NC.state.chat.turns.at(-1).coach.busy`, { timeout: 15000 });
+  s = await coachState();
+  const talk1 = await b.eval(`window.coachCalls.at(-1)`);
+  check('the coach answers what the learner wrote', /You: ?I think the last digits are wrong/.test(s.text.replace(/You(?=I)/, 'You: ')) && /You are right that the number is off/.test(s.text) && /Has a problem/.test(s.text), s.text);
+  check('it is sent the review material, its own review, and the learner’s view', talk1.body.messages.length === 3 && talk1.body.messages[1].role === 'assistant' && /"verdict":"wrong"/.test(talk1.body.messages[1].content) && /Before seeing your review, the learner gave their own view[\s\S]*last digits are wrong/.test(talk1.body.messages[2].content) && /talking with you/.test(talk1.body.system) && /6,113 × 427/.test(talk1.body.messages[0].content), J(talk1.body.messages.map(m => m.role + ': ' + String(m.content).slice(0, 80))));
+  await b.eval(`(() => { const f = document.querySelector('.msg.bot:last-child .coach form.ask'), i = f.querySelector('input'); i.value = 'How could I check it myself?'; f.requestSubmit(); })()`);
+  await b.waitFor(`(NC.state.chat.turns.at(-1).coach.talk || []).length === 4 && !NC.state.chat.turns.at(-1).coach.busy`, { timeout: 15000 });
+  const talk2 = await b.eval(`window.coachCalls.at(-1)`);
+  s = await coachState();
+  check('the learner can go on talking with the coach about the reply', talk2.body.messages.length === 5 && talk2.body.messages[4].content === 'How could I check it myself?' && talk2.body.messages[3].role === 'assistant' && (s.text.match(/You are right that the number is off/g) || []).length === 2 && /Say more to the coach/.test(await b.eval(`document.querySelector('.msg.bot:last-child .coach form.ask input').placeholder`)), J(talk2.body.messages.map(m => m.role)));
+  check('Nano does not see the conversation with the coach', !(await b.eval(`NC.engine.lastSystem + NC.state.chat.turns.map(t => t.text).join(' ')`)).includes('How could I check it myself'));
+  await b.screenshot(path.join(shots, 'coach-talk.png'), { h: 900 });
+  // searching through the AI whose key was given
+  await b.eval(`NC.settings.provider = 'ai'; NC.settings.coach.mode = 'off'; NC.setParts(NC.defaultParts(true))`);
+  await fresh();
+  r = await ask('How long is the Forth Bridge in Scotland, and when did it open?');
+  const sc = await b.eval(`window.coachCalls.at(-1)`);
+  check('“search through the AI” asks that AI to search, and Nano answers from what it reports', used(r, 'web_search') && /through Claude/.test(r.steps.find(s => s.tool === 'web_search').label) && /1890/.test(r.text) && r.sources === 1 && sc.body.tools[0].type === 'web_search_20260209' && /Search for: /.test(sc.body.messages[0].content) && /web search tool/.test(sc.body.system), r.steps.map(s => s.label).join('; ') + ' / ' + r.text);
+  await b.eval(`NC.settings.keys = {}; NC.settings.coach.keys = {}`);
+  r = await ask('And how tall is the Eiffel Tower?');
+  check('without a key it falls back to Wikipedia', used(r, 'web_search') && /Searched Wikipedia/.test(r.steps.find(s => s.tool === 'web_search').label), r.steps.map(s => s.label).join('; '));
+  await b.eval(`NC.settings.provider = 'wikipedia'; NC.settings.coach.keys = { anthropic: 'k', gemini: 'k', openai: 'k' }`);
   // "Other": an address and a model the user types
   await b.eval(`Object.assign(NC.settings.coach, { mode: 'ask', provider: 'other', url: 'https://example.test/v1/', quiz: false, search: true, models: { other: 'my-model' } }); window.coachGood = false; NC.setParts({ ...NC.defaultParts(true), calculator: false })`);
   await fresh();
@@ -283,6 +321,7 @@ try {
   check('Nano never sees the coach', !(await b.eval(`NC.engine.lastSystem + NC.state.chat.turns.map(t => t.text).join(' ')`)).includes('The multiplication is not right'));
   await b.eval(`NC.showSettings()`);
   check('settings show the coach, its key and model, and say what is sent', await b.eval(`!!document.querySelector('#coachMode') && !!document.querySelector('#coachKey') && !!document.querySelector('#coachModelSel') && !/null|undefined/.test(document.querySelector('#dBody').textContent) && /goes to that company/.test(document.querySelector('#dBody').textContent)`));
+  check('“Where searches go” offers the AI whose key was given', await b.eval(`(() => { const x = document.querySelector('#provAi'); return !!x && !x.disabled && /through Claude/.test(x.closest('label').textContent); })()`), await b.eval(`(document.querySelector('#provAi') || { closest: () => ({ textContent: 'missing' }) }).closest('label').textContent`));
   const pick = (sel, value) => b.eval(`(() => { const x = document.querySelector(${J(sel)}); x.value = ${J(value)}; x.dispatchEvent(new Event('change', { bubbles: true })); })()`);
   check('the model is chosen from a list that ends in “Other”', await b.eval(`(() => { const o = [...document.querySelectorAll('#coachModelSel option')].map(x => x.textContent); return o[0] === 'claude-sonnet-5-5 (suggested)' && /^Other/.test(o.at(-1)) && !document.querySelector('#coachModel'); })()`), await b.eval(`[...document.querySelectorAll('#coachModelSel option')].map(x => x.textContent).join(' | ')`));
   await pick('#coachModelSel', '*');

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Nano Chat was made</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%230f766e' d='M12 8h40a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H30L16 60V48h-4a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8z'/%3E%3Cpath fill='%23fff' d='M32 13l4.2 10.8L47 28l-10.8 4.2L32 43l-4.2-10.8L17 28l10.8-4.2z'/%3E%3C/svg%3E">
+<style>
+:root { --bg: #f7f6f3; --panel: #ffffff; --ink: #1f2328; --muted: #6b7280; --line: #dedbd3; --accent: #0f766e; --soft: #d9efec; --code: #f1efea; }
+@media (prefers-color-scheme: dark) { :root { --bg: #17191c; --panel: #1f2226; --ink: #e7e9ec; --muted: #9aa3ad; --line: #32363c; --accent: #2dd4bf; --soft: #143b37; --code: #262a2f; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+nav { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); font-size: 15px; }
+nav a { color: var(--muted); text-decoration: none; } nav a:hover, nav a.here { color: var(--ink); } nav .brand { font-weight: 650; color: var(--ink); margin-right: auto; }
+main { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
+h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; } h2 { font-size: 22px; margin: 38px 0 8px; }
+.lead { font-size: 19px; color: var(--muted); margin: 0 0 22px; }
+a { color: var(--accent); } img { max-width: 100%; border: 1px solid var(--line); border-radius: 12px; display: block; margin: 14px 0; }
+code { background: var(--code); border-radius: 6px; padding: .1em .4em; font: .92em ui-monospace, Consolas, monospace; }
+blockquote { margin: 14px 0; padding: 2px 16px; border-left: 3px solid var(--accent); color: var(--muted); }
+.note { background: var(--soft); border-radius: 12px; padding: 10px 16px; margin: 16px 0; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 16px; } th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; } th { background: var(--panel); }
+.scroll { overflow-x: auto; }
+ol, ul { padding-left: 1.4em; } li { margin: 5px 0; }
+footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px solid var(--line); padding-top: 14px; }
+</style>
+</head>
+<body>
+<nav><a class="brand" href="./">Nano Chat</a><a href="student-guide.html">For students</a><a href="teacher-guide.html">For teachers</a><a class="here" href="making-of.html">How it was made</a><a href="https://github.com/ToonTalk/nano-chat">Code</a></nav>
+<main>
+<h1>How Nano Chat was made</h1>
+<p class="lead">Nano Chat was built in one long working session on November 22, 2026, by Ken Kahn and Claude. This is an account of that session: what was asked, what was measured, what went wrong, and what is still unverified.</p>
+
+<div class="note">Ken set the direction and judged the results. Claude (Anthropic's Claude Fable 5.2, working in Claude Code on Ken's computer) wrote the page, tested it against the real model, and wrote this report from the record of the session. Ken's own account is in his post, <a href="https://docs.google.com/document/d/100TuZ1hSkCIE6gXLNsJulXOVqc7B5ghLfRsPteOIb-Y/edit?usp=sharing">Claude helped me make an app for exploring how to turn an LLM into a chatbot</a>.</div>
+
+<h2>The request</h2>
+<blockquote>Let's create a web page that is a nice chatbot that relies exclusively on Gemini Nano in Chrome. First let's talk about how to address some of its limitations such as the size of the context window. And can it when appropriate use a few tools such as web search and a calculator?</blockquote>
+<p>So the first step was a conversation, not code. Two of the design's central ideas came from Ken in that conversation: a generated <b>table of contents</b> of the saved transcript, to help the model look back into a long conversation, and a <b>notes</b> tool kept in the browser's storage.</p>
+
+<h2>Measuring before designing</h2>
+<p>Chrome's built-in model is new and its rules change between versions, so Claude began by probing Ken's Chrome (version 157) from a test page:</p>
+<div class="scroll"><table>
+<tr><th>Question</th><th>What the probe found</th></tr>
+<tr><td>How much can the model read at once?</td><td>9,216 tokens, roughly 6,500 words, for everything: instructions, conversation, tool results and the reply.</td></tr>
+<tr><td>Can a page set the temperature?</td><td>No. The setting is accepted and ignored, so answers vary by chance and nothing can be done about it.</td></tr>
+<tr><td>Does it call tools?</td><td>No. A <code>tools</code> option is accepted and ignored.</td></tr>
+<tr><td>Can its output be forced into a shape?</td><td>Yes. A JSON schema constrains the reply, and a small decision takes about 2 seconds.</td></tr>
+<tr><td>How fast does it read?</td><td>Only 250 to 300 tokens a second, so long texts are expensive.</td></tr>
+<tr><td>Which search services can a web page call?</td><td>Wikipedia, Tavily and Serper. Brave and Exa refuse calls from pages.</td></tr>
+</table></div>
+<p>Each row shaped the design. The small window led to a page that owns the transcript and treats the model's sessions as disposable. The missing tool calling led to a separate small session that chooses a tool as constrained JSON. The slow reading led to skimming long documents instead of reading them whole.</p>
+
+<h2>Testing on the real model</h2>
+<p>Every claim about the page's behavior was checked against the real Gemini Nano, not a stand-in. A script copies the installed model into a throwaway Chrome profile, starts Chrome without a window, and drives the page through the same protocol the developer tools use. Ken's own Chrome profile is never touched.</p>
+<p>That testing kept overturning assumptions:</p>
+<ul>
+  <li><b>The model invented tool results.</b> The first instructions described what a search result looks like, so that Nano would recognize one. Nano began writing pretend results of its own. Removing the description fixed it, and a guard now cuts a reply that starts doing it.</li>
+  <li><b>Examples leak.</b> Shown an example calculation for a tip, the tool chooser copied the example's numbers into a different question. The examples were changed to be unlike anything a user would ask.</li>
+  <li><b>Wikipedia's search misses the obvious.</b> A question about the Eiffel Tower's designer returned the Tokyo Skytree. The page now also checks which runs of words in a question are article titles.</li>
+  <li><b>Summarizing a long article took 89 seconds.</b> It now skims: the opening in full and samples from the rest, about 27 seconds, and the page says it skimmed.</li>
+</ul>
+
+<h2>The turn toward teaching</h2>
+<p>With a working chatbot published, Ken changed the question:</p>
+<blockquote>I'm thinking of the pedagogic value of the chatbot. I think every feature should be togglable.</blockquote>
+<p>He was unsure whether the features should start switched off, so that users see how far a language model is from a reasonable chatbot and have to enable them, or start switched on, so that users can do ablation studies. Claude's recommendation was not to choose. Both starting points use the same switches, and one feature makes them the same activity: running a message again with different parts and showing the answers side by side. Ken also proposed an optional <b>coach</b>, a frontier model that would "ask the user what they think of a response before pointing out flaws".</p>
+<img src="screenshots/compare.png" alt="Bare Nano's wrong answer to a percentage question beside a second try with the calculator part switched on.">
+
+<h2>What bare Nano actually did</h2>
+<p>The challenges offered to students had to fail reliably without the part they teach, so each was tried on the bare model first. Some results were surprises:</p>
+<ul>
+  <li>Asked who it was, it said it was "Gemma", from Google DeepMind. The model file Chrome had installed is labeled <code>v3Nano</code>.</li>
+  <li>Asked the date, it said May 15, 2024.</li>
+  <li>Given a Wikipedia address that reveals nothing about its page, it confidently described the wrong article: Theodore Roosevelt for Albert Einstein's page, and "The Paleolithic" for the page on aglets.</li>
+  <li>It <b>multiplied 4,387 by 291 correctly</b>, working step by step. The planned calculator challenge was useless. Percentages and powers did fail every time, so the challenge became "17.5% of 83,946.20".</li>
+</ul>
+
+<h2>The coach, and a real key</h2>
+<p>The coach was first built against stand-ins for the three AI services, plus a check that each service accepts calls from a web page. That left the real thing unverified, and Claude said so. Ken offered his Claude API key. The test was arranged so that the key stayed in the test program and was never typed into the page or printed.</p>
+<p>With the real key, Claude Sonnet 5.5 rated a wrong sum as wrong, gave the right figure, quoted Nano's "I can calculate that for you!" as misleading, and named the calculator as the part to switch on. Asked about two answers, it commented on each and said what made the difference.</p>
+<img src="screenshots/coach.png" alt="The coach's comments on two answers, from the run with a real key.">
+<p>It also <b>found a bug in Claude's own code</b>. Reviewing a question about the football World Cup, asked with web search off, the coach noticed the page had handed Nano an irrelevant calculator result. The tool chooser, denied its search, had grabbed the calculator. The page now refuses a calculator call for a message with no number in it.</p>
+
+<h2>Misunderstandings and mistakes</h2>
+<p>A fair account includes these.</p>
+<ul>
+  <li><b>"Other."</b> Ken wrote that the coach's options should include "other", which the user types. Claude took it to mean the list of models, then the list of AI services, and built both. Ken meant a fourth answer to the coach's question: the learner's opinion in their own words. That was built third. The first two stayed, since they are useful.</li>
+  <li><b>An instruction with side effects.</b> To make drawing requests work, Claude told Nano in its standing instructions to answer them with SVG code. Nano then offered an unrequested picture of a bridge after a factual answer. The instruction is now added only to messages that ask for a picture.</li>
+  <li><b>A refusal that looked like caution.</b> Asked for a packing list, the complete chatbot searched Wikipedia, found nothing useful, and declined to help. It is now told to answer from what it knows and say it could not check.</li>
+  <li><b>Tests that tested the wrong thing.</b> Several failures were faults in the test scripts: a conversation too short to fill the memory, a fact placed in the wrong message.</li>
+</ul>
+
+<h2>What could not be done</h2>
+<ul>
+  <li><b>A version inside a Claude artifact.</b> Ken asked whether one could use Gemini Nano. A probe published as an artifact showed that Chrome exposes the model's interface there but the frame's permissions switch it off, so the answer is no.</li>
+  <li><b>Running on most school laptops.</b> Chrome requires a graphics card with more than 4 GB of memory, or 16 GB of RAM. Ken asked whether almost all new laptops qualify. They do not: laptops with 8 GB were returning in 2026 because of memory prices.</li>
+</ul>
+
+<h2>Still unverified</h2>
+<ul>
+  <li>The coach with a real Gemini or ChatGPT key, or with a typed "Other" service. Only Claude was run for real.</li>
+  <li>Voice with a real microphone and loudspeaker. The test Chrome has neither, so stand-ins were used.</li>
+  <li>Tavily and Serper searches with real keys.</li>
+  <li>The screen shown while Chrome first downloads the model.</li>
+</ul>
+
+<h2>By the numbers</h2>
+<div class="scroll"><table>
+<tr><td>The app</td><td>One HTML file, no libraries, about 1,800 lines.</td></tr>
+<tr><td>Automated checks on the real Gemini Nano</td><td>210, in five suites, all passing at the time of writing.</td></tr>
+<tr><td>Checks with a real Claude key</td><td>12 in the final run. Three runs sent 12 requests in all, estimated from the token counts at 30 to 40 US cents.</td></tr>
+<tr><td>Parts with a switch</td><td>13, plus one extra.</td></tr>
+<tr><td>Time</td><td>One working session, on one day.</td></tr>
+</table></div>
+
+<h2>Run it yourself</h2>
+<p>The <a href="https://github.com/ToonTalk/nano-chat">code</a> is public under the MIT license. The page is a single file that also works opened from disk. The tests need Windows, Node 24, and a Chrome that already has the model installed; the README lists the commands.</p>
+
+<footer><a href="./">Open Nano Chat</a> · <a href="student-guide.html">Guide for students</a> · <a href="teacher-guide.html">Guide for teachers</a></footer>
+</main>
+</body>
+</html>
