@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nano Chat</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%230f766e' d='M12 8h40a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H30L16 60V48h-4a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8z'/%3E%3Cpath fill='%23fff' d='M32 13l4.2 10.8L47 28l-10.8 4.2L32 43l-4.2-10.8L17 28l10.8-4.2z'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f7f6f3; --panel: #ffffff; --side: #efede8; --ink: #1f2328; --muted: #6b7280; --line: #dedbd3;
+  --accent: #0f766e; --accent-ink: #ffffff; --accent-soft: #d9efec; --user: #e3f1ef; --chip: #f1efea;
+  --warn: #b45309; --code: #f3f1ec; --shadow: 0 8px 30px rgba(0,0,0,.14);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c; --panel: #1f2226; --side: #131517; --ink: #e7e9ec; --muted: #9aa3ad; --line: #32363c;
+    --accent: #2dd4bf; --accent-ink: #06201d; --accent-soft: #143b37; --user: #1d3a37; --chip: #282c31;
+    --warn: #fbbf24; --code: #262a2f; --shadow: 0 8px 30px rgba(0,0,0,.5);
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+button { font: inherit; color: inherit; cursor: pointer; }
+#app { display: grid; grid-template-columns: 260px 1fr; height: 100%; }
+aside { background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 16px 16px 10px; font-weight: 650; font-size: 18px; }
+.brand svg { width: 26px; height: 26px; }
+.sideBtn { display: flex; align-items: center; gap: 8px; width: calc(100% - 20px); margin: 4px 10px; padding: 9px 12px; background: transparent; border: 1px solid transparent; border-radius: 10px; text-align: left; }
+.sideBtn:hover { background: var(--chip); }
+#newChat { border-color: var(--line); background: var(--panel); }
+#chatList { flex: 1; overflow-y: auto; padding: 6px 0; }
+.chatItem { display: flex; align-items: center; margin: 2px 10px; border-radius: 10px; }
+.chatItem button.open { flex: 1; min-width: 0; padding: 8px 12px; background: none; border: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 10px; }
+.chatItem.on { background: var(--accent-soft); }
+.chatItem:hover { background: var(--chip); }
+.chatItem.on:hover { background: var(--accent-soft); }
+.chatItem button.del { visibility: hidden; background: none; border: 0; color: var(--muted); padding: 4px 10px; }
+.chatItem:hover button.del { visibility: visible; }
+.sideFoot { border-top: 1px solid var(--line); padding: 6px 0 10px; }
+.count { color: var(--muted); font-size: 13px; }
+main { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; }
+header { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--line); min-height: 54px; }
+header h1 { flex: 1; min-width: 0; margin: 0; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#menuBtn { display: none; background: none; border: 0; font-size: 20px; }
+.pill { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 13px; color: var(--muted); white-space: nowrap; }
+.pill:hover { color: var(--ink); }
+.bar { width: 64px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.bar.hot i { background: var(--warn); }
+#scroll { flex: 1; overflow-y: auto; min-height: 0; }
+#thread { max-width: 780px; margin: 0 auto; padding: 22px 18px 10px; }
+.msg { margin: 0 0 18px; }
+.msg.user { display: flex; flex-direction: column; align-items: flex-end; }
+.msg.user .bubble { background: var(--user); padding: 10px 14px; border-radius: 16px 16px 4px 16px; max-width: 85%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.bot .body { overflow-wrap: anywhere; }
+.body > :first-child { margin-top: 0; } .body > :last-child { margin-bottom: 0; }
+.body p { margin: .55em 0; } .body h1, .body h2, .body h3, .body h4 { margin: .9em 0 .4em; line-height: 1.25; }
+.body h1 { font-size: 1.3em; } .body h2 { font-size: 1.18em; } .body h3, .body h4 { font-size: 1.05em; }
+.body ul, .body ol { margin: .5em 0; padding-left: 1.5em; } .body li.d1 { margin-left: 1.4em; } .body li.d2 { margin-left: 2.8em; }
+.body code { background: var(--code); padding: .1em .35em; border-radius: 5px; font: .9em ui-monospace, Consolas, monospace; }
+.body pre { background: var(--code); padding: 12px 14px; border-radius: 10px; overflow-x: auto; } .body pre code { background: none; padding: 0; }
+.body blockquote { margin: .6em 0; padding: .1em 1em; border-left: 3px solid var(--line); color: var(--muted); }
+.body table { border-collapse: collapse; margin: .6em 0; display: block; overflow-x: auto; } .body th, .body td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; }
+.body a { color: var(--accent); } .body hr { border: 0; border-top: 1px solid var(--line); margin: 1em 0; }
+a.cite { display: inline-block; min-width: 1.5em; padding: 0 .35em; margin: 0 .1em; font-size: .75em; text-align: center; text-decoration: none; background: var(--accent-soft); color: var(--ink); border-radius: 999px; vertical-align: .15em; }
+.steps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; align-items: flex-start; }
+details.step { background: var(--chip); border-radius: 12px; font-size: 14px; max-width: 100%; }
+details.step summary { list-style: none; cursor: pointer; padding: 6px 12px; display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+details.step summary::-webkit-details-marker { display: none; }
+details.step summary::after { content: "▸"; color: var(--muted); margin-left: 2px; } details.step[open] summary::after { content: "▾"; }
+details.step.err { color: var(--warn); }
+details.step .more { padding: 2px 12px 10px; color: var(--muted); }
+details.step pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 300px; overflow: auto; background: var(--panel); padding: 10px; border-radius: 8px; font: 12.5px/1.45 ui-monospace, Consolas, monospace; color: var(--ink); margin: 6px 0 0; }
+.undo { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 1px 10px; font-size: 13px; }
+.status { color: var(--muted); font-size: 14px; display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.spin { width: 13px; height: 13px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.sources { margin-top: 10px; font-size: 13.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; }
+.sources a { color: var(--ink); text-decoration: none; background: var(--chip); padding: 2px 10px; border-radius: 999px; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sources a:hover { background: var(--accent-soft); }
+.att { display: inline-flex; gap: 6px; align-items: center; background: var(--chip); border-radius: 10px; padding: 4px 10px; font-size: 13.5px; margin: 0 0 6px 6px; }
+.att button { background: none; border: 0; color: var(--muted); padding: 0 2px; }
+.divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; margin: 6px 0 20px; }
+.divider::before, .divider::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
+.divider details { max-width: 70%; } .divider summary { cursor: pointer; } .divider p { margin: 6px 0 0; }
+.stopped { color: var(--muted); font-size: 13px; font-style: italic; }
+.welcome { text-align: center; padding: 8vh 10px 0; }
+.welcome h2 { font-size: 26px; margin: 12px 0 6px; } .welcome p { color: var(--muted); margin: 0 auto 20px; max-width: 520px; }
+.welcome svg { width: 56px; height: 56px; }
+.tries { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 600px; margin: 0 auto; }
+.tries button { text-align: left; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.tries button:hover { border-color: var(--accent); }
+.tries small { display: block; color: var(--muted); }
+.door { max-width: 520px; margin: 10vh auto 0; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 26px; text-align: center; }
+.door h2 { margin: 0 0 8px; } .door p { color: var(--muted); margin: 8px 0; } .door ul { text-align: left; color: var(--muted); }
+.big { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; padding: 11px 20px; font-weight: 600; margin-top: 10px; }
+progress { width: 100%; height: 10px; accent-color: var(--accent); }
+footer { padding: 6px 18px 12px; }
+.composerWrap { max-width: 780px; margin: 0 auto; }
+.composer { display: flex; align-items: flex-end; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 8px 8px 8px 6px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+.composer:focus-within { border-color: var(--accent); }
+.composer textarea { flex: 1; border: 0; outline: 0; resize: none; background: transparent; color: var(--ink); font: inherit; padding: 6px 4px; max-height: 200px; min-height: 28px; }
+.icon { background: none; border: 0; border-radius: 10px; padding: 5px 9px; font-size: 18px; color: var(--muted); } .icon:hover { background: var(--chip); }
+#sendBtn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 12px; padding: 7px 16px; font-weight: 600; } #sendBtn:disabled { opacity: .45; cursor: default; }
+.hint { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 7px; }
+dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--ink); padding: 0; width: min(640px, 94vw); max-height: 88vh; box-shadow: var(--shadow); }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+.dhead { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); }
+.dhead h2 { flex: 1; margin: 0; font-size: 18px; } .dbody { padding: 16px 18px 20px; overflow-y: auto; }
+.dbody p { margin: 0 0 12px; } .dbody .sub { color: var(--muted); font-size: 14px; }
+.dbody label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 14px; }
+.dbody input[type=text], .dbody input[type=password], .dbody textarea, .dbody select { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font: inherit; }
+.dbody textarea { min-height: 64px; resize: vertical; }
+.radio { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; font-weight: 400 !important; } .radio small { display: block; color: var(--muted); }
+.note { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+.note .row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; } .note .row input[type=text] { font-weight: 600; }
+.note .row label { margin: 0; font-weight: 400; font-size: 13px; white-space: nowrap; display: flex; gap: 4px; align-items: center; }
+.plain { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px 14px; }
+.stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); margin: 10px 0 6px; }
+.stack i { display: block; height: 100%; } .k1 { background: #7c6fd6; } .k2 { background: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13.5px; color: var(--muted); margin-bottom: 12px; } .legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
+.dbody pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); padding: 12px; border-radius: 10px; font: 12.5px/1.5 ui-monospace, Consolas, monospace; max-height: 320px; overflow: auto; }
+.toc { display: block; width: 100%; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+.toc:hover { border-color: var(--accent); } .toc small { color: var(--muted); display: block; }
+@media (max-width: 760px) {
+  #app { grid-template-columns: 1fr; }
+  aside { position: fixed; inset: 0 auto 0 0; width: 270px; z-index: 5; transform: translateX(-100%); transition: transform .2s; box-shadow: var(--shadow); }
+  body.menu aside { transform: none; }
+  #menuBtn { display: block; }
+  .tries { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <div class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="var(--accent)" d="M12 8h40a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H30L16 60V48h-4a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8z"/><path fill="var(--accent-ink)" d="M32 13l4.2 10.8L47 28l-10.8 4.2L32 43l-4.2-10.8L17 28l10.8-4.2z"/></svg>Nano Chat</div>
+    <button class="sideBtn" id="newChat">＋ New chat</button>
+    <nav id="chatList" aria-label="Chats"></nav>
+    <div class="sideFoot">
+      <button class="sideBtn" id="openNotes">📒 Notes <span class="count" id="noteCount"></span></button>
+      <button class="sideBtn" id="openSettings">⚙️ Settings</button>
+    </div>
+  </aside>
+  <main>
+    <header>
+      <button id="menuBtn" aria-label="Chats">☰</button>
+      <h1 id="chatTitle">New chat</h1>
+      <button class="pill" id="openContents" hidden>📑 Contents <span id="tocCount"></span></button>
+      <button class="pill" id="meter" title="What Nano can see right now">Memory <span class="bar"><i></i></span> <span id="meterPct">0%</span></button>
+    </header>
+    <div id="scroll"><div id="thread"></div></div>
+    <footer>
+      <div class="composerWrap">
+        <div id="attRow"></div>
+        <div class="composer">
+          <button class="icon" id="attachBtn" title="Attach a text file">📎</button>
+          <input type="file" id="fileIn" accept=".txt,.md,.csv,.json,.html,.log,text/*" hidden>
+          <textarea id="input" rows="1" placeholder="Ask anything" aria-label="Message"></textarea>
+          <button id="sendBtn" disabled>Send</button>
+        </div>
+        <div class="hint" id="hint">Runs on this computer with Gemini Nano. It is a small model and can be wrong.</div>
+      </div>
+    </footer>
+  </main>
+</div>
+<dialog id="dlg"><div class="dhead"><h2 id="dTitle"></h2><button class="icon" id="dClose" aria-label="Close">✕</button></div><div class="dbody" id="dBody"></div></dialog>
+
+<script>
+'use strict';
+// ───────────────────────────── small helpers ─────────────────────────────
+const $ = s => document.querySelector(s);
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') n.className = v; else if (k === 'html') n.innerHTML = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else if (k in n && k !== 'list') n[k] = v; else n.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) n.append(k);
+  return n;
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const store = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const CH = 3.6;                                   // characters per token, roughly
+const est = s => Math.ceil((s || '').length / CH);
+const clip = (s, chars) => s.length <= chars ? s : s.slice(0, Math.round(chars * .75)) + '\n[… shortened …]\n' + s.slice(-Math.round(chars * .2));
+const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+const params = new URLSearchParams(location.search);
+const SIM_WINDOW = +params.get('window') || 0;    // ?window=1500 pretends Nano's memory is smaller, to watch summarizing happen
+
+// ───────────────────────────── storage ─────────────────────────────
+const db = {
+  open() { return this.p ||= new Promise((res, rej) => { const r = indexedDB.open('nanochat', 1); r.onupgradeneeded = () => r.result.createObjectStore('chats', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async tx(mode, fn) { const d = await this.open(); return new Promise((res, rej) => { const t = d.transaction('chats', mode); const q = fn(t.objectStore('chats')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); },
+  all() { return this.tx('readonly', s => s.getAll()); },
+  put(c) { return this.tx('readwrite', s => s.put(JSON.parse(JSON.stringify(c)))); },
+  del(id) { return this.tx('readwrite', s => s.delete(id)); },
+};
+const settings = Object.assign({ provider: 'wikipedia', keys: {}, recall: 'both', reader: true }, load('nanochat.settings', {}));
+const saveSettings = () => store('nanochat.settings', settings);
+let notes = load('nanochat.notes', []);            // [{id, title, body, pinned}]
+const saveNotes = () => { store('nanochat.notes', notes); engine.dirty = true; $('#noteCount').textContent = notes.length ? notes.length : ''; };
+const state = { chats: [], chat: null, abort: null, atts: [], busy: false };
+
+// ───────────────────────────── text search (keywords) ─────────────────────────────
+const STOP = new Set(('a an the and or but if of to in on at for with from by is are was were be been being it its this that these those as not no do does did have has had ' +
+  'i you he she we they them his her my your our their me what which who whom when where why how can could would should will shall may might about into over than then so such there here just also very more most some any all each tell please know say said').split(' '));
+const stem = w => { w = w.replace(/'s$/, ''); if (w.length > 4) w = w.replace(/ies$/, 'y').replace(/(ing|ed|es|s)$/, ''); return w; };
+const words = s => ((s || '').toLowerCase().match(/[a-z0-9][a-z0-9'-]*/g) || []).filter(w => !STOP.has(w) && w.length > 1).map(stem);
+function rank(query, items, textOf = x => x.text) {
+  const q = [...new Set(words(query))];
+  if (!q.length || !items.length) return [];
+  const docs = items.map(it => words(textOf(it))), N = docs.length, df = {};
+  for (const d of docs) for (const w of new Set(d)) df[w] = (df[w] || 0) + 1;
+  const avg = docs.reduce((a, d) => a + d.length, 0) / N || 1;
+  return items.map((it, i) => {
+    const tf = {}; for (const w of docs[i]) tf[w] = (tf[w] || 0) + 1;
+    let s = 0;
+    for (const w of q) if (tf[w]) s += Math.log(1 + (N - df[w] + .5) / (df[w] + .5)) * tf[w] * 2.2 / (tf[w] + 1.2 * (.25 + .75 * docs[i].length / avg));
+    return { it, score: s, i };
+  }).filter(x => x.score > 0).sort((a, b) => b.score - a.score);
+}
+function passages(text, size = 700) {
+  const out = []; let cur = '';
+  const push = () => { if (cur.trim()) out.push(cur.trim()); cur = ''; };
+  for (const p of text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean)) {
+    if (p.length > size * 1.5) { push(); for (const s of p.match(/[^.!?\n]+[.!?]*\s*|\n/g) || [p]) { if (cur.length + s.length > size) push(); cur += s; } push(); }
+    else { if (cur.length + p.length > size) push(); cur += (cur ? '\n' : '') + p; }
+  }
+  push();
+  return out.flatMap(p => p.length > size * 3 ? p.match(new RegExp(`[\\s\\S]{1,${size * 2}}`, 'g')) : [p]);
+}
+
+// ───────────────────────────── calculator ─────────────────────────────
+// A real parser, so the arithmetic never depends on the model. Numbers, + - * / ^ %, !, parentheses,
+// functions, and dates (2026-12-25, today) with daysBetween, addDays and weekday.
+const DAY = 86400000;
+const isDate = v => v && typeof v === 'object' && 'day' in v;
+const mkDate = (y, m, d) => ({ day: Math.round(Date.UTC(y, m - 1, d) / DAY) });
+const todayDate = () => { const n = new Date(); return mkDate(n.getFullYear(), n.getMonth() + 1, n.getDate()); };
+const isoDate = v => new Date(v.day * DAY).toISOString().slice(0, 10);
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function calcClean(src) {
+  return src.toLowerCase().replace(/[$£€]/g, '').replace(/(\d),(?=\d{3}(\D|$))/g, '$1')
+    .replace(/[×·]/g, '*').replace(/(\d)\s*x\s*(?=\d)/g, '$1*').replace(/÷/g, '/').replace(/[−–—]/g, '-').replace(/\*\*/g, '^')
+    .replace(/%\s*of\b/g, '% *').replace(/\bpercent( of)?\b/g, (m, of) => of ? '% *' : '%')
+    .replace(/\b(multiplied by|times)\b/g, '*').replace(/\bdivided by\b/g, '/').replace(/\bplus\b/g, '+').replace(/\bminus\b/g, '-')
+    .replace(/\bto the power of\b/g, '^').replace(/\bsquared\b/g, '^2').replace(/\bcubed\b/g, '^3').replace(/[=?]\s*$/, '').trim();
+}
+function calc(src) {
+  const s = calcClean(src); let i = 0; const toks = [];
+  while (i < s.length) {
+    const c = s[i]; let m;
+    if (/\s/.test(c)) { i++; continue; }
+    if ((m = /^\d{4}-\d{1,2}-\d{1,2}/.exec(s.slice(i)))) { const [y, mo, d] = m[0].split('-').map(Number); toks.push({ t: 'val', v: mkDate(y, mo, d) }); i += m[0].length; continue; }
+    if ((m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/.exec(s.slice(i)))) { toks.push({ t: 'val', v: parseFloat(m[0]) }); i += m[0].length; continue; }
+    if ((m = /^[a-z_][a-z0-9_]*/.exec(s.slice(i)))) { toks.push({ t: 'id', v: m[0] }); i += m[0].length; continue; }
+    if ('+-*/^%!(),'.includes(c)) { toks.push({ t: c }); i++; continue; }
+    throw new Error(`I can't read "${c}" in a calculation`);
+  }
+  let p = 0; const peek = () => toks[p] || { t: 'end' }, take = t => { if (peek().t !== t) throw new Error(`expected "${t}"`); return toks[p++]; };
+  const num = v => { if (typeof v !== 'number') throw new Error('that needs a number, not a date'); return v; };
+  const FN = {
+    sqrt: Math.sqrt, cbrt: Math.cbrt, abs: Math.abs, floor: Math.floor, ceil: Math.ceil, exp: Math.exp, ln: Math.log, log: Math.log10, log10: Math.log10, log2: Math.log2,
+    sin: Math.sin, cos: Math.cos, tan: Math.tan, asin: Math.asin, acos: Math.acos, atan: Math.atan,
+    round: (x, n = 0) => Math.round(x * 10 ** n) / 10 ** n, min: Math.min, max: Math.max, pow: Math.pow,
+    sum: (...a) => a.reduce((x, y) => x + y, 0), mean: (...a) => a.reduce((x, y) => x + y, 0) / a.length, average: (...a) => a.reduce((x, y) => x + y, 0) / a.length, avg: (...a) => a.reduce((x, y) => x + y, 0) / a.length,
+  };
+  const DFN = {
+    daysbetween: (a, b) => { if (!isDate(a) || !isDate(b)) throw new Error('daysBetween needs two dates'); return b.day - a.day; },
+    adddays: (a, n) => { if (!isDate(a)) throw new Error('addDays needs a date first'); return { day: a.day + num(n) }; },
+    weekday: a => { if (!isDate(a)) throw new Error('weekday needs a date'); return WEEKDAYS[new Date(a.day * DAY).getUTCDay()]; },
+  };
+  function primary() {
+    const t = peek();
+    if (t.t === 'val') { p++; return { v: t.v }; }
+    if (t.t === '(') { p++; const v = expr(); take(')'); return { v: v.v }; }
+    if (t.t === 'id') {
+      p++;
+      if (peek().t === '(') {
+        p++; const args = []; if (peek().t !== ')') { args.push(expr().v); while (peek().t === ',') { p++; args.push(expr().v); } } take(')');
+        if (DFN[t.v]) return { v: DFN[t.v](...args) };
+        if (FN[t.v]) return { v: FN[t.v](...args.map(num)) };
+        throw new Error(`I don't know the function "${t.v}"`);
+      }
+      if (t.v === 'pi') return { v: Math.PI }; if (t.v === 'e') return { v: Math.E }; if (t.v === 'today') return { v: todayDate() };
+      if (t.v === 'tomorrow') return { v: { day: todayDate().day + 1 } }; if (t.v === 'yesterday') return { v: { day: todayDate().day - 1 } };
+      throw new Error(`I don't know what "${t.v}" is`);
+    }
+    throw new Error('the calculation is incomplete');
+  }
+  function postfix() {
+    let x = primary();
+    for (;;) {
+      if (peek().t === '!') { p++; let n = num(x.v), f = 1; if (n < 0 || n > 170 || !Number.isInteger(n)) throw new Error('factorial needs a whole number from 0 to 170'); for (let k = 2; k <= n; k++) f *= k; x = { v: f }; }
+      else if (peek().t === '%') { p++; x = { v: num(x.v) / 100, pct: true }; }
+      else if (peek().t === '(' || (peek().t === 'id' && peek().v !== 'mod')) { const y = primary(); x = { v: num(x.v) * num(y.v) }; }     // 2(3+4), 2pi
+      else return x;
+    }
+  }
+  function unary() { if (peek().t === '-') { p++; const x = unary(); return { v: -num(x.v) }; } if (peek().t === '+') { p++; return unary(); } return power(); }
+  function power() { const b = postfix(); if (peek().t === '^') { p++; const e = unary(); return { v: Math.pow(num(b.v), num(e.v)) }; } return b; }
+  function term() {
+    let x = unary();
+    for (;;) {
+      const t = peek().t;
+      if (t === '*') { p++; x = { v: num(x.v) * num(unary().v) }; }
+      else if (t === '/') { p++; const d = num(unary().v); if (d === 0) throw new Error("you can't divide by zero"); x = { v: num(x.v) / d }; }
+      else if (t === 'id' && peek().v === 'mod') { p++; x = { v: num(x.v) % num(unary().v) }; }
+      else return x;
+    }
+  }
+  function expr() {
+    let x = term();
+    for (;;) {
+      const t = peek().t; if (t !== '+' && t !== '-') return x;
+      p++; const y = term(), sign = t === '+' ? 1 : -1;
+      if (isDate(x.v) && isDate(y.v) && sign < 0) x = { v: x.v.day - y.v.day };
+      else if (isDate(x.v)) x = { v: { day: x.v.day + sign * num(y.v) } };
+      else if (y.pct && !x.pct) x = { v: num(x.v) * (1 + sign * y.v) };             // 80 + 10%  means 88
+      else x = { v: num(x.v) + sign * num(y.v) };
+    }
+  }
+  if (!toks.length) throw new Error('there is nothing to calculate');
+  const r = expr().v; if (p < toks.length) throw new Error('I could not read all of that calculation');
+  if (isDate(r)) return { value: r, text: `${isoDate(r)} (a ${WEEKDAYS[new Date(r.day * DAY).getUTCDay()]})` };
+  if (typeof r === 'string') return { value: r, text: r };
+  if (!Number.isFinite(r)) throw new Error('the result is not a finite number');
+  const v = Math.abs(r) < 1e15 && Math.abs(r) >= 1e-7 || r === 0 ? parseFloat(r.toPrecision(12)) : r;
+  return { value: v, text: Math.abs(v) >= 1e15 || (v !== 0 && Math.abs(v) < 1e-7) ? v.toExponential(6) : v.toLocaleString('en-US', { maximumFractionDigits: 10 }) };
+}
+function pureMath(text) {
+  const t = text.trim().replace(/^(what\s+is|what's|whats|calculate|compute|work out|how much is)\s+/i, '').replace(/[=?]+\s*$/, '');
+  const c = calcClean(t);
+  return /^[\d\s.+\-*/^()%!]+$/.test(c) && /\d/.test(c) && /[+\-*/^%!]/.test(c.replace(/^\s*-/, '')) && !/^\d{1,4}-\d{1,2}-\d{1,4}$/.test(c) ? t : null;
+}
+
+// ───────────────────────────── Markdown ─────────────────────────────
+function md(src, sources = []) {
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const blocks = [];
+  src = src.replace(/```[\w+-]*\n?([\s\S]*?)(?:```|$)/g, (m, code) => { blocks.push('<pre><code>' + esc(code.replace(/\n$/, '')) + '</code></pre>'); return `\n\u0000${blocks.length - 1}\u0000\n`; });
+  const inline = s => {
+    s = esc(s); const ic = [];
+    s = s.replace(/`([^`\n]+)`/g, (m, c) => { ic.push('<code>' + c + '</code>'); return `\u0001${ic.length - 1}\u0001`; });
+    s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]*[^\s<).,;:!?])/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>').replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*\w])\*([^*\s][^*\n]*?)\*(?![*\w])/g, '$1<em>$2</em>').replace(/(^|[^_\w])_([^_\s][^_\n]*?)_(?![_\w])/g, '$1<em>$2</em>');
+    s = s.replace(/\[(\d{1,2})\]/g, (m, n) => sources[n - 1] && sources[n - 1].url ? `<a class="cite" href="${esc(sources[n - 1].url)}" target="_blank" rel="noopener" title="${esc(sources[n - 1].title)}">${n}</a>` : m);
+    return s.replace(/\u0001(\d+)\u0001/g, (m, k) => ic[k]);
+  };
+  const lines = src.split('\n'), out = []; let i = 0;
+  const LIST = /^(\s*)([-*+•]|\d+[.)])\s+(.*)$/, ROW = /^\s*\|.*\|\s*$/;
+  while (i < lines.length) {
+    const L = lines[i]; let m;
+    if (!L.trim()) { i++; continue; }
+    if ((m = /^\u0000(\d+)\u0000$/.exec(L))) { out.push(blocks[m[1]]); i++; continue; }
+    if ((m = /^(#{1,6})\s+(.*)$/.exec(L))) { const h = Math.min(4, m[1].length); out.push(`<h${h}>${inline(m[2].replace(/\s*#+\s*$/, ''))}</h${h}>`); i++; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(L)) { out.push('<hr>'); i++; continue; }
+    if (/^\s*>/.test(L)) { const q = []; while (i < lines.length && /^\s*>/.test(lines[i])) q.push(lines[i++].replace(/^\s*>\s?/, '')); out.push('<blockquote>' + md(q.join('\n'), sources) + '</blockquote>'); continue; }
+    if (ROW.test(L) && i + 1 < lines.length && /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(lines[i + 1])) {
+      const cells = r => r.trim().replace(/^\||\|$/g, '').split('|').map(c => inline(c.trim()));
+      let h = '<table><thead><tr>' + cells(L).map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>'; i += 2;
+      while (i < lines.length && ROW.test(lines[i])) h += '<tr>' + cells(lines[i++]).map(c => `<td>${c}</td>`).join('') + '</tr>';
+      out.push(h + '</tbody></table>'); continue;
+    }
+    if ((m = LIST.exec(L))) {
+      const ordered = /\d/.test(m[2]), base = m[1].length; let h = ordered ? '<ol>' : '<ul>';
+      while (i < lines.length) {
+        const k = LIST.exec(lines[i]);
+        if (k && k[1].length <= base && /\d/.test(k[2]) !== ordered) break;
+        if (k) { const depth = Math.max(0, Math.min(2, Math.floor((k[1].length - base) / 2))); h += `<li${depth > 0 ? ` class="d${depth}"` : ''}>${inline(k[3])}`; i++; }
+        else if (lines[i].trim() && /^\s{2,}/.test(lines[i])) { h += '<br>' + inline(lines[i].trim()); i++; }
+        else if (!lines[i].trim() && i + 1 < lines.length && LIST.test(lines[i + 1])) { i++; continue; }
+        else break;
+        h += '';
+      }
+      out.push(h.replace(/<li/g, '</li><li').replace('</li>', '') + '</li>' + (ordered ? '</ol>' : '</ul>')); continue;
+    }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|\u0000|\s*>)/.test(lines[i]) && !LIST.test(lines[i])) para.push(lines[i++]);
+    if (!para.length) para.push(lines[i++]);
+    out.push('<p>' + para.map(inline).join('<br>') + '</p>');
+  }
+  return out.join('\n');
+}
+
+// ───────────────────────────── the model ─────────────────────────────
+const LM = self.LanguageModel;
+const LM_OPTS = { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] };
+const SIDE_SYS = 'You follow instructions exactly and write plain, compact text. You never add information that is not in the material you are given.';
+const ROUTER_SYS = `You are the tool chooser for a chat assistant. Read the user's latest message and choose the ONE tool the assistant needs next, or "answer" if it needs none. Reply with JSON like {"tool": "...", "input": "...", "title": "..."}. Use "" for a field the tool does not need.
+
+Tools
+- answer: no tool. For greetings, chat, opinions, writing, brainstorming, explaining ideas, coding help, and anything the recent conversation or the saved notes already answer.
+- calculator: for any arithmetic, percentages, or date math. "input" is a math expression, for example 0.17 * 2340, (1200 - 950) / 950 * 100, sqrt(2) * 10, 1000 * 1.05^10, daysBetween(today, 2026-12-25), addDays(today, 90), weekday(2027-01-01). Never do arithmetic yourself.
+- web_search: for facts about particular people, places, organizations, products, works, science or history where exact details matter; for anything recent or that changes over time; and whenever the user asks you to look something up. "input" is a short keyword query, not a sentence. "title" is the main subject, named the way an encyclopedia would title its article. Use names from the conversation instead of words like "it" or "there". Never search the web for the user's own private details (their codes, plans, family, preferences): those are in the notes or the conversation.
+- save_note: only when the user asks you to remember, note or save something. "title" is a short title. "input" is the fact to save, written so it makes sense on its own.
+- read_note: when one of the saved note titles looks like it holds what the user wants. "input" is that title.
+- recall: when the user refers to something from earlier in this conversation that is not in the recent messages shown to you. "input" is keywords to look for.
+
+Examples
+"thanks, that helps!" -> {"tool":"answer","input":"","title":""}
+"write a limerick about my cat" -> {"tool":"answer","input":"","title":""}
+"Explain recursion simply" -> {"tool":"answer","input":"","title":""}
+"what's 8% sales tax on $249.99?" -> {"tool":"calculator","input":"249.99 * 0.08","title":""}
+"how many days until Christmas?" -> {"tool":"calculator","input":"daysBetween(today, 2026-12-25)","title":""}
+"I've started learning the violin, by the way." -> {"tool":"answer","input":"","title":""}
+"Who is the prime minister of Canada?" -> {"tool":"web_search","input":"prime minister of Canada","title":"Prime Minister of Canada"}
+"how tall is the Burj Khalifa" -> {"tool":"web_search","input":"Burj Khalifa height","title":"Burj Khalifa"}
+"tell me something surprising about owls" -> {"tool":"web_search","input":"owl facts","title":"Owl"}
+"Remember that my sister's birthday is March 9" -> {"tool":"save_note","input":"My sister's birthday is March 9.","title":"Sister's birthday"}
+"what was that recipe you gave me at the start?" -> {"tool":"recall","input":"recipe ingredients","title":""}
+Choose for the LATEST user message only. Earlier messages are shown just so you can tell what words like "it" mean; never repeat a search that belonged to an earlier message. When the user is simply telling you something, with no question or request, choose "answer".
+When a tool has already been used for this message and its result is enough to reply, choose "answer".`;
+
+const engine = {
+  ready: false, W: 9216, realW: 9216, main: null, router: null, side: null, dirty: true, lastSystem: '',
+  async init(onProgress) {
+    const monitor = m => m.addEventListener('downloadprogress', e => onProgress && onProgress(e.loaded));
+    this.side = await LM.create({ ...LM_OPTS, monitor, initialPrompts: [{ role: 'system', content: SIDE_SYS }] });
+    this.router = await LM.create({ ...LM_OPTS, initialPrompts: [{ role: 'system', content: ROUTER_SYS }] });
+    this.realW = this.side.contextWindow || this.side.inputQuota || 9216;
+    this.W = SIM_WINDOW ? Math.min(SIM_WINDOW, this.realW) : this.realW;
+    this.ready = true;
+  },
+  // One question to a throwaway copy of a base session: it gets a full, clean memory and leaves no trace.
+  async ask(base, prompt, { schema, signal } = {}) {
+    const s = await base.clone({ signal });
+    try { return (await s.prompt(prompt, { responseConstraint: schema, signal })).trim(); } finally { s.destroy(); }
+  },
+  async askJSON(base, prompt, schema, signal) { try { return JSON.parse(await this.ask(base, prompt, { schema, signal })); } catch (e) { if (e.name === 'AbortError') throw e; console.warn('askJSON', e); return null; } },
+  usage() { return this.main && !this.dirty ? (this.main.contextUsage ?? this.main.inputUsage ?? 0) : null; },
+};
+// How Nano's memory is shared out. Everything scales with the window Chrome reports.
+const B = {
+  get reserve() { return Math.min(1200, Math.round(engine.W * .15)); },     // kept free for the reply
+  get evidence() { return Math.min(2000, Math.round(engine.W * .22)); },    // tool results for one message
+  get tail() { return Math.round(engine.W * .25); },                        // recent messages kept word for word after summarizing
+  get turnCap() { return Math.round(engine.W * .12); },                     // one message's share of the session
+  get notes() { return Math.round(engine.W * .07); },
+  get contents() { return Math.round(engine.W * .10); },
+  get compactAt() { return Math.round(engine.W * .62); },
+  get segment() { return Math.min(2500, Math.round(engine.W * .3)); },
+};
+
+// ───────────────────────────── notes ─────────────────────────────
+function notesForPrompt() {
+  const inlined = [], titlesOnly = []; let used = 0;
+  for (const n of [...notes].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))) {
+    const t = est(n.title + n.body) + 4;
+    if (n.pinned || used + t <= B.notes) { inlined.push(n); used += t; } else titlesOnly.push(n);
+  }
+  return { inlined, titlesOnly };
+}
+// A saved note that shares at least two meaningful words with a message.
+function noteMatch(text) {
+  const w = new Set(words(text)), hit = rank(text, notes, n => n.title + ' ' + n.body)[0];
+  return hit && new Set(words(hit.it.title + ' ' + hit.it.body).filter(x => w.has(x))).size >= 2 ? hit.it : null;
+}
+function findNote(title) {
+  const t = title.trim().toLowerCase();
+  return notes.find(n => n.title.toLowerCase() === t) || (rank(title, notes, n => n.title + ' ' + n.title + ' ' + n.body)[0] || {}).it || null;
+}
+
+// ───────────────────────────── what Nano is told ─────────────────────────────
+function contentsForPrompt(chat) {
+  if (!chat.segments.length) return '';
+  const full = chat.segments.map((s, i) => `${i + 1}. ${s.title}${s.gist ? ' — ' + s.gist : ''}`);
+  const short = chat.segments.map((s, i) => `${i + 1}. ${s.title}${s.topics && s.topics.length ? ' (' + s.topics.join(', ') + ')' : ''}`);
+  let k = 0;                                        // the oldest k entries drop their gist when space is tight
+  const text = () => [...short.slice(0, k), ...full.slice(k)].join('\n');
+  while (k < full.length && est(text()) > B.contents) k++;
+  return clip(text(), B.contents * CH);
+}
+function systemPrompt(chat) {
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  let s = `You are a friendly, helpful assistant called Nano. You run entirely on the user's own computer, inside Chrome, as the small on-device model Gemini Nano.
+Keep answers clear and fairly short. You may use Markdown.
+You are a small model, so be honest: when you are not sure, say so instead of guessing, and never make up sources, links or quotations.
+You are unreliable at arithmetic. State a calculated number only when it has been given to you; otherwise say what would need working out.
+For reference, today's date is ${today}.
+Sometimes a message arrives together with facts the app has looked up for you (a calculation, search results, a note, part of a document). Trust those over your own memory and copy numbers from them exactly. You cannot look anything up yourself, so never write out calculator output or search results of your own.`;
+  const n = notesForPrompt();
+  if (n.inlined.length) s += `\n\nThe user's saved notes (things they asked you to remember):\n` + n.inlined.map(x => `- ${x.title}: ${x.body}`).join('\n');
+  if (n.titlesOnly.length) s += `\n\nOther saved notes, by title only (the app opens one when needed): ` + n.titlesOnly.map(x => x.title).join('; ');
+  const c = contentsForPrompt(chat);
+  if (c) s += `\n\nThis conversation is longer than you can hold at once. Here are the contents of the earlier part, which you no longer see word for word:\n${c}\nIf the user asks for a detail from the earlier part that is not written here, say you would need to look back, instead of guessing.`;
+  return s;
+}
+const sessionText = t => clip((t.text || (t.role === 'assistant' ? '(no reply)' : '')) + (t.atts || []).map(a => `\n[The user attached "${a.name}", ${a.text.length.toLocaleString('en-US')} characters. The app read it for you.]`).join(''), B.turnCap * CH);
+async function buildMain(chat, upto) {
+  if (engine.main) { try { engine.main.destroy(); } catch {} engine.main = null; }
+  const sys = systemPrompt(chat), msgs = [];
+  for (let i = chat.compactedUpTo; i + 1 < upto; i += 2) msgs.push({ role: 'user', content: sessionText(chat.turns[i]) }, { role: 'assistant', content: sessionText(chat.turns[i + 1]) });
+  engine.main = await LM.create({ ...LM_OPTS, initialPrompts: [{ role: 'system', content: sys }, ...msgs] });
+  engine.main.addEventListener('contextoverflow', () => { console.warn('Nano dropped old messages by itself'); engine.dirty = true; });
+  engine.lastSystem = sys; engine.dirty = false; engine.builtFor = chat.id;
+}
+
+// ───────────────────────────── summarizing: the table of contents ─────────────────────────────
+const SEG_SCHEMA = { type: 'object', properties: { title: { type: 'string' }, topics: { type: 'array', items: { type: 'string' }, maxItems: 6 }, gist: { type: 'string' } }, required: ['title', 'topics', 'gist'], additionalProperties: false };
+async function compact(chat, upto, signal) {
+  const pair = i => est(sessionText(chat.turns[i])) + est(sessionText(chat.turns[i + 1]));
+  let start = upto, acc = 0;
+  while (start - 2 >= chat.compactedUpTo) { const t = pair(start - 2); if (start < upto && acc + t > B.tail) break; acc += t; start -= 2; }
+  if (start <= chat.compactedUpTo) return false;
+  const groups = []; let g = null;
+  for (let i = chat.compactedUpTo; i < start; i += 2) { const t = pair(i); if (!g || g.tokens + t > B.segment) groups.push(g = { from: i, to: i, tokens: 0 }); g.to = i + 2; g.tokens += t; }
+  for (const gr of groups) {
+    let convo = '';
+    for (let i = gr.from; i < gr.to; i += 2) convo += `User: ${clip(chat.turns[i].text, 1600)}\nAssistant: ${clip(chat.turns[i + 1].text || '(no reply)', 1600)}\n\n`;
+    const r = await engine.askJSON(engine.side, `Below is one stretch of a conversation between a user and an assistant. Write a table-of-contents entry for it, as JSON.
+- "title": 3 to 7 words naming what this stretch was about
+- "topics": 3 to 6 specific keywords or names that appear in it
+- "gist": 1 to 3 sentences giving the facts, decisions, names and numbers most worth remembering
+
+Conversation:
+${clip(convo, engine.realW * CH * .6)}`, SEG_SCHEMA, signal);
+    chat.segments.push({ id: uid(), from: gr.from, to: gr.to, title: (r && r.title || chat.turns[gr.from].text.slice(0, 50)).trim(), topics: (r && r.topics || []).slice(0, 6), gist: (r && r.gist || '').trim() });
+  }
+  chat.compactedUpTo = start; engine.dirty = true;
+  return true;
+}
+
+// ───────────────────────────── tools ─────────────────────────────
+async function wikipedia(q, signal, key, subject) {
+  const api = p => fetch('https://en.wikipedia.org/w/api.php?' + new URLSearchParams({ action: 'query', format: 'json', origin: '*', ...p }), { signal }).then(r => r.json());
+  // Wikipedia's own search often misses the obvious article for a query like "Eiffel Tower designer", so first
+  // see which runs of words in the query are article titles ("Eiffel Tower"), and put those articles first.
+  const toks = q.replace(/["“”?!.,;:()|]/g, ' ').split(/\s+/).filter(Boolean), grams = [];
+  for (let n = Math.min(4, toks.length); n >= 1; n--) for (let i = 0; i + n <= toks.length; i++) {
+    const g = toks.slice(i, i + n);
+    if (STOP.has(g[0].toLowerCase()) || STOP.has(g[n - 1].toLowerCase())) continue;
+    if (n === 1 && !(/^[A-Z0-9]/.test(g[0]) || toks.length <= 2)) continue;
+    if (grams.length < 40) grams.push({ t: g.join(' '), n, i });
+  }
+  // The router also names the subject ("Honey bee"); that article, or the best match for that name, goes first of all.
+  const subj = (subject || '').replace(/[|"]/g, ' ').trim(), soft = e => { if (e.name === 'AbortError') throw e; return null; };
+  const search = (s, n) => api({ generator: 'search', gsrsearch: s, gsrlimit: String(n), prop: 'extracts|info', exintro: '1', explaintext: '1', exlimit: 'max', inprop: 'url' });
+  const sorted = r => Object.values(r && r.query && r.query.pages || {}).sort((a, b) => a.index - b.index);
+  const [found, j, sj] = await Promise.all([
+    grams.length || subj ? api({ titles: [subj, ...grams.map(g => g.t)].filter(Boolean).join('|'), redirects: '1', prop: 'info|pageprops', inprop: 'url', ppprop: 'disambiguation' }).catch(soft) : null,
+    search(q, 5), subj && subj.toLowerCase() !== q.toLowerCase() ? search(subj, 2).catch(soft) : null,
+  ]);
+  const named = [], first = [];
+  if (found && found.query) {
+    const norm = new Map((found.query.normalized || []).map(x => [x.from, x.to])), redir = new Map((found.query.redirects || []).map(x => [x.from, x.to]));
+    const byTitle = new Map(Object.values(found.query.pages || {}).map(p => [p.title, p])), taken = new Set();
+    const page = name => { let t = norm.get(name) || name; t = redir.get(t) || t; const p = byTitle.get(t); return !p || 'missing' in p || 'invalid' in p || (p.pageprops && 'disambiguation' in p.pageprops) ? null : p; };
+    if (subj && page(subj)) first.push(page(subj));
+    for (const g of grams) {                                                   // longest runs first; no word used twice
+      const p = page(g.t); if (!p) continue;
+      const span = Array.from({ length: g.n }, (x, k) => g.i + k); if (span.some(k => taken.has(k))) continue;
+      span.forEach(k => taken.add(k)); if (!named.some(x => x.pageid === p.pageid)) named.push(p);
+    }
+  }
+  const pages = [];
+  for (const p of [...first, ...sorted(sj), ...named.slice(0, 2), ...sorted(j)]) if (pages.length < 5 && !pages.some(x => x.pageid === p.pageid)) pages.push(p);
+  const full = await Promise.all(pages.slice(0, 2).map(p => api({ prop: 'extracts', explaintext: '1', pageids: String(p.pageid) }).then(x => x.query.pages[p.pageid].extract).catch(() => null)));
+  return pages.map((p, i) => ({ title: p.title, url: p.fullurl, text: (full[i] || p.extract || '').slice(0, 150000) })).filter(r => r.text);
+}
+const PROVIDERS = {
+  wikipedia: { name: 'Wikipedia', search: wikipedia },
+  tavily: { name: 'the web', label: 'Tavily', keyUrl: 'https://tavily.com', async search(q, signal, key) {
+    const r = await fetch('https://api.tavily.com/search', { method: 'POST', signal, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key }, body: JSON.stringify({ query: q, max_results: 5, search_depth: 'basic' }) });
+    if (!r.ok) throw new Error(r.status === 401 ? 'Tavily did not accept the key' : 'Tavily answered ' + r.status);
+    return ((await r.json()).results || []).map(x => ({ title: x.title, url: x.url, text: x.content || '' })).filter(x => x.text);
+  } },
+  serper: { name: 'the web', label: 'Serper (Google results)', keyUrl: 'https://serper.dev', async search(q, signal, key) {
+    const r = await fetch('https://google.serper.dev/search', { method: 'POST', signal, headers: { 'content-type': 'application/json', 'X-API-KEY': key }, body: JSON.stringify({ q }) });
+    if (!r.ok) throw new Error(r.status === 403 || r.status === 401 ? 'Serper did not accept the key' : 'Serper answered ' + r.status);
+    const j = await r.json(), out = [];
+    if (j.answerBox) out.push({ title: j.answerBox.title || 'Answer', url: j.answerBox.link || '', text: [j.answerBox.answer, j.answerBox.snippet].filter(Boolean).join(' ') });
+    if (j.knowledgeGraph && j.knowledgeGraph.description) out.push({ title: j.knowledgeGraph.title, url: j.knowledgeGraph.descriptionLink || '', text: j.knowledgeGraph.description + ' ' + Object.entries(j.knowledgeGraph.attributes || {}).map(([k, v]) => `${k}: ${v}.`).join(' ') });
+    for (const o of j.organic || []) out.push({ title: o.title, url: o.link, text: o.snippet || '' });
+    return out.filter(x => x.text);
+  } },
+};
+// Picks the passages that share the most (rare) words with the question, up to a budget.
+function pickPassages(results, query, budgetChars) {
+  const cands = results.flatMap((r, ri) => passages(r.text).map((text, pi) => ({ ri, pi, text })));
+  const ranked = rank(query, cands), chosen = []; let used = 0; const per = {};
+  const add = c => { if (chosen.includes(c) || used + c.text.length > budgetChars || (per[c.ri] || 0) >= 4) return; chosen.push(c); used += c.text.length; per[c.ri] = (per[c.ri] || 0) + 1; };
+  const lead = cands.find(c => c.ri === 0 && c.pi === 0); if (lead) add(lead);
+  ranked.forEach(x => add(x.it));
+  if (!chosen.length) cands.slice(0, 3).forEach(add);
+  return chosen.sort((a, b) => a.ri - b.ri || a.pi - b.pi);
+}
+const GENERIC = /\b(summar\w*|tl;?dr|main points?|key points?|overview|gist|outline)\b|what('s| is| does) (this|it|that) (about|say)|explain (this|it)\b/i;
+// A long text never goes in whole. Either the passages that match the question are picked out, or
+// (for "summarize this") each part is read by a throwaway session and only the digests come back.
+async function docEvidence(label, text, question, step, signal) {
+  const budget = Math.round(B.evidence * CH * .9);
+  text = text.replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+  if (text.length <= budget) return text;
+  const generic = GENERIC.test(question) || words(question).length < 2;
+  if (!generic) {
+    const got = pickPassages([{ text }], question, budget);
+    if (rank(question, got).length) { step.how = `picked ${got.length} matching passages out of ${text.length.toLocaleString('en-US')} characters`; return got.map(c => c.text).join('\n…\n'); }
+  }
+  const size = Math.round(Math.min(9000, engine.W * CH * .45)), chunks = []; let cur = '';
+  for (const p of passages(text, 1200)) { if (cur.length + p.length > size) { chunks.push(cur); cur = ''; } cur += p + '\n\n'; }
+  if (cur.trim()) chunks.push(cur);
+  // Nano reads only a few hundred tokens a second, so a very long text is skimmed: its opening in full, then
+  // evenly spaced samples from the rest. Up to four parts are read in full.
+  let use = chunks, skim = false;
+  if (chunks.length > 4) {
+    skim = true; const rest = passages(chunks.slice(1).join('\n\n'), 700), want = Math.floor(size / 760), stride = Math.max(1, rest.length / want), samples = [];
+    for (let k = 0; k < want && Math.floor(k * stride) < rest.length; k++) samples.push(rest[Math.floor(k * stride)]);
+    use = [chunks[0]]; let c = '';
+    for (const s of samples) { if (c.length + s.length > size) { use.push(c); c = ''; } c += s + '\n[…]\n'; }
+    if (c) use.push(c);
+  }
+  const outs = [], each = Math.max(40, Math.min(110, Math.round(B.evidence * .7 / use.length)));
+  for (let i = 0; i < use.length; i++) {
+    step.label = `Reading ${label}, part ${i + 1} of ${use.length}…`; ui.bot(step.owner);
+    const ask = generic ? `List the main points of this part in at most ${each} words.` : `The user asked: "${question}"\nWrite what this part says that helps answer that, in at most ${each} words. If it says nothing relevant, reply exactly: nothing relevant.`;
+    const r = await engine.ask(engine.side, `This is ${skim && i ? 'a set of samples from later in' : `part ${i + 1} of ${use.length} of`} "${label}".\n---\n${use[i]}\n---\n${ask}`, { signal });
+    if (!/^nothing relevant\.?$/i.test(r)) outs.push(`${skim ? (i ? 'Later on' : 'Opening') : 'Part ' + (i + 1)}: ${r}`);
+  }
+  step.how = skim ? `skimmed by side sessions: the opening in full and samples from the rest (about ${Math.round(use.join('').length / 1000)},000 of ${Math.round(text.length / 1000)},000 characters)` : `read in ${use.length} parts by side sessions`;
+  return clip(outs.join('\n') || 'Nothing in it seemed relevant to the question.', budget) + (skim ? '\n(The text was long, so it was skimmed, not read in full. Say so if it matters.)' : '');
+}
+async function readPage(url, signal) {
+  try {
+    const r = await fetch(url, { signal });
+    if (r.ok && /html|text/.test(r.headers.get('content-type') || '')) {
+      const doc = new DOMParser().parseFromString(await r.text(), 'text/html');
+      doc.querySelectorAll('script,style,nav,header,footer,aside,noscript,svg,form').forEach(n => n.remove());
+      const root = doc.querySelector('article, main') || doc.body;
+      const text = [...root.querySelectorAll('h1,h2,h3,h4,p,li,pre,blockquote,td')].map(n => n.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n\n');
+      if (text.length > 300) return { title: doc.title || host(url), text, via: 'directly' };
+    }
+  } catch (e) { if (e.name === 'AbortError') throw e; }
+  if (!settings.reader) throw new Error('that site does not let other pages read it, and the reader service is turned off in Settings');
+  const r = await fetch('https://r.jina.ai/' + url, { signal });
+  if (!r.ok) throw new Error('the reader service answered ' + r.status);
+  const t = await r.text(), m = /^Title:\s*(.*)$/m.exec(t);
+  return { title: m ? m[1].trim() : host(url), text: t.replace(/^[\s\S]*?Markdown Content:\s*/, ''), via: 'through r.jina.ai' };
+}
+function recallItems(chat) {
+  const items = [];
+  for (let i = 0; i + 1 < chat.compactedUpTo; i += 2) {
+    const seg = chat.segments.findIndex(s => i >= s.from && i < s.to);
+    items.push({ i, seg, text: `User: ${chat.turns[i].text}\nAssistant: ${chat.turns[i + 1].text}` });
+    for (const st of chat.turns[i + 1].steps || []) if (st.evidence && st.tool !== 'recall' && st.tool !== 'calculator') items.push({ i, seg, text: st.evidence });
+  }
+  chat.turns.forEach((t, i) => (t.atts || []).forEach(a => passages(a.text, 1200).forEach(text => items.push({ i, seg: -1, text: `From "${a.name}": ${text}` }))));
+  return items;
+}
+async function recall(chat, query, step, signal) {
+  const items = recallItems(chat);
+  const kw = rank(query, items), score = new Map(kw.map(x => [x.it, x.score])), top = kw.length ? kw[0].score : 1;
+  let ranked = kw, picked = [];
+  if (settings.recall !== 'keywords' && chat.segments.length) {
+    const r = await engine.askJSON(engine.side, `These are the contents of the earlier part of a conversation:\n${chat.segments.map((s, i) => `${i + 1}. ${s.title}. Topics: ${(s.topics || []).join(', ')}. ${clip(s.gist || '', 400)}`).join('\n')}\n\nWhich entries are most likely to hold this: "${query}"? Reply as JSON with "entries": the one or two best entry numbers.`,
+      { type: 'object', properties: { entries: { type: 'array', items: { type: 'string', enum: chat.segments.map((s, i) => String(i + 1)) }, minItems: 1, maxItems: 2 } }, required: ['entries'], additionalProperties: false }, signal);
+    picked = [...new Set((r && r.entries || []).map(x => +x - 1))].filter(k => chat.segments[k]);
+    const inSeg = it => picked.includes(it.seg);
+    // Contents only: just the entry Nano picked, best word matches first. Both: keyword matches, with that entry's messages moved up.
+    if (settings.recall === 'contents') ranked = items.filter(inSeg).map(it => ({ it, score: (score.get(it) || 0) + top * .01 }));
+    else ranked = items.map(it => ({ it, score: (score.get(it) || 0) * (inSeg(it) ? 1.5 : 1) + (inSeg(it) ? top * .5 : 0) })).filter(x => x.score > 0);
+    ranked.sort((a, b) => b.score - a.score);
+  }
+  step.how = `mode: ${settings.recall}` + (picked.length ? `; Nano pointed at contents ${picked.map(k => `entry ${k + 1}, “${chat.segments[k].title}”`).join(' and ')}` : settings.recall !== 'keywords' && chat.segments.length ? '; Nano pointed at no contents entry' : '');
+  const budget = B.evidence * CH * .9, cap = Math.min(1200, Math.floor(budget / 2.2)), out = []; let used = 0;
+  for (const x of ranked.slice(0, 6)) { const t = clip(x.it.text, cap); if (used + t.length > budget) break; out.push({ i: x.it.i, t }); used += t.length; }
+  out.sort((a, b) => a.i - b.i);
+  step.turn = out.length ? out[0].i : null;
+  return out.map(o => o.t).join('\n---\n');
+}
+
+const REMEMBER = /\b(remember|note|save|don'?t forget|keep in mind|write (this |that |it )?down|jot|memorize|store)\b/i;
+const TOOL_ING = { calculator: 'Calculating…', web_search: 'Searching…', save_note: 'Saving a note…', read_note: 'Opening a note…', recall: 'Looking back…', read_page: 'Reading the page…', document: 'Reading the attachment…' };
+async function runStep(chat, user, bot, d, signal) {
+  const step = { tool: d.tool, input: (d.input || '').trim(), title: (d.title || '').trim(), status: 'running', label: TOOL_ING[d.tool], owner: bot.id, t0: Date.now() };
+  bot.steps.push(step); ui.bot(bot.id);
+  const question = user.text.replace(/https?:\/\/\S+/g, ' ').replace(/\s+/g, ' ').trim() || 'What are the main points?';
+  try {
+    if (d.tool === 'calculator') {
+      const r = calc(step.input); step.label = `${step.input} = ${r.text}`; step.result = r.text;
+      step.evidence = `Calculator: ${step.input} = ${r.text}`;
+    } else if (d.tool === 'web_search') {
+      let prov = settings.provider !== 'wikipedia' && settings.keys[settings.provider] ? settings.provider : 'wikipedia', results, note = '';
+      try { results = await PROVIDERS[prov].search(step.input, signal, settings.keys[prov], step.title); }
+      catch (e) { if (e.name === 'AbortError' || prov === 'wikipedia') throw e; note = ` (${e.message}, so Wikipedia was used)`; prov = 'wikipedia'; results = await wikipedia(step.input, signal, null, step.title); }
+      if (!results.length) throw new Error('nothing was found');
+      const chosen = pickPassages(results, step.input + ' ' + question, B.evidence * CH * .9), nums = new Map(); let ev = '';
+      for (const c of chosen) {
+        const r = results[c.ri];
+        if (!nums.has(c.ri)) { bot.sources.push({ title: r.title, url: r.url }); nums.set(c.ri, bot.sources.length); ev += `\n[${bot.sources.length}] ${r.title}\n`; }
+        ev += c.text + '\n';
+      }
+      step.label = `Searched ${PROVIDERS[prov].name} for “${step.input}”${note}`; step.how = `${results.length} results; ${chosen.length} passages chosen by matching words`;
+      step.evidence = `Search results for "${step.input}":${ev}`;
+    } else if (d.tool === 'read_page') {
+      const pg = await readPage(step.input, signal);
+      bot.sources.push({ title: pg.title, url: step.input }); const n = bot.sources.length;
+      const ev = await docEvidence(pg.title, pg.text, question, step, signal);
+      step.label = `Read ${host(step.input)} ${pg.via}`; step.evidence = `[${n}] From the page "${pg.title}" (${step.input}):\n${ev}`;
+    } else if (d.tool === 'document') {
+      const ev = await docEvidence(step.title, d.text, question, step, signal);
+      step.label = `Read “${step.title}”`; step.evidence = `From the attached text "${step.title}":\n${ev}`;
+    } else if (d.tool === 'save_note') {
+      if (!step.input) throw new Error('there was nothing to save');
+      const title = step.title || step.input.split(/\s+/).slice(0, 5).join(' ').replace(/[.,;:]$/, '');
+      const old = notes.find(n => n.title.toLowerCase() === title.toLowerCase());
+      if (old) { step.undo = { id: old.id, body: old.body }; old.body = old.body.includes(step.input) ? old.body : (old.body + '\n' + step.input).trim(); }
+      else { const n = { id: uid(), title, body: step.input, pinned: false }; notes.push(n); step.undo = { id: n.id, body: null }; }
+      saveNotes(); step.title = title; step.label = `Saved a note: “${title}”`; step.how = step.input;
+      step.evidence = `The app saved this note for the user. Title: "${title}". Text: "${step.input}"`;
+    } else if (d.tool === 'read_note') {
+      const n = findNote(step.input); if (!n) throw new Error(`no note matches “${step.input}”`);
+      step.label = `Opened the note “${n.title}”`; step.evidence = `The user's saved note "${n.title}":\n${clip(n.body, B.evidence * CH * .9)}`;
+    } else if (d.tool === 'recall') {
+      const ev = await recall(chat, step.input, step, signal);
+      step.label = `Looked back for “${step.input}”` + (ev ? '' : ' and found nothing more');
+      step.evidence = ev ? `From earlier in this conversation (word for word):\n${ev}` : `The app looked through the earlier part of this conversation for "${step.input}" and found nothing beyond what you can already see. Answer from what you can see, or say you don't have it.`;
+    }
+    step.status = 'ok';
+  } catch (e) {
+    if (e.name === 'AbortError') { step.status = 'error'; step.label = 'Stopped'; throw e; }
+    step.status = 'error'; step.error = e.message || String(e);
+    step.label = `${{ calculator: 'The calculator', web_search: 'The search', read_page: 'Reading the page', document: 'Reading the attachment', save_note: 'Saving the note', read_note: 'Opening the note', recall: 'Looking back' }[d.tool]} did not work: ${step.error}`;
+    step.evidence = `(The app tried the ${d.tool.replace('_', ' ')} tool with "${step.input}" but it failed: ${step.error}. Tell the user plainly.)`;
+  }
+  step.ms = Date.now() - step.t0; ui.bot(bot.id);
+  return step;
+}
+
+// The decision: a few tokens of JSON, constrained by a schema, from a copy of the router session.
+function hintsFor(text) {
+  const h = [];
+  const asks = /\?|^\s*(what|how|calc|work out|compute|find)\b/i.test(text);      // a statement that merely contains numbers needs no arithmetic
+  if (/\d\s*[+*/^x×÷]\s*\d/.test(text) || (asks && /\d/.test(text) && /%|\b(percent|times|divided|plus|minus|sum|total|average|split|tip|interest|how (much|many)|square root)\b/i.test(text))) h.push('it has numbers to work out, so the calculator is likely');
+  if (/\b(days?|weeks?) (until|till|since|from|before|after)\b|\bwhat day\b|\bhow long (until|since)\b/i.test(text)) h.push('it is date math, so the calculator is likely');
+  if (/\b(latest|current(ly)?|today'?s|right now|recent(ly)?|news|this (week|month|year)|20[2-9]\d|who (is|won|was|invented|wrote|founded)|price|population|look up|search|how (tall|old|far|big|long is))\b/i.test(text)) h.push('it asks for a fact worth checking, so web_search is likely');
+  return h;
+}
+async function decide(chat, user, bot, idx, signal) {
+  const text = user.text.trim(), tools = ['answer', 'calculator'], done = new Set(bot.steps.map(s => s.tool));
+  if (navigator.onLine !== false && !done.has('web_search')) tools.push('web_search');      // one search per message
+  if (REMEMBER.test(text)) tools.push('save_note');
+  const np = notesForPrompt(); if (np.titlesOnly.length) tools.push('read_note');
+  if (chat.compactedUpTo > 0 || chat.turns.some(t => (t.atts || []).length)) tools.push('recall');
+  const recent = chat.turns.slice(Math.max(0, idx - 4), idx).map(t => `${t.role === 'user' ? 'User' : 'Assistant'}: ${clip(t.text.replace(/\s+/g, ' '), 320)}`).join('\n');
+  const used = bot.steps.filter(s => s.tool !== 'document' && s.tool !== 'read_page').map(s => `- ${s.tool}("${s.input}") gave: ${clip((s.evidence || s.error || '').replace(/\s+/g, ' '), 420)}`).join('\n');
+  const hints = used ? [] : hintsFor(text), nm = used ? null : noteMatch(text);
+  if (nm) hints.push(np.inlined.includes(nm) ? `the saved note "${nm.title}" seems to cover this and the assistant can already see it, so "answer" is likely` : `the saved note "${nm.title}" seems to cover this, so read_note is likely`);
+  const prompt = `Today is ${new Date().toLocaleDateString('en-US', { weekday: 'long' })}, ${isoDate(todayDate())}.
+Tools you may choose now: ${tools.join(', ')}.
+${notes.length ? 'Saved note titles: ' + notes.map(n => n.title).join('; ') + (np.inlined.length ? '\nNotes the assistant can already see in full: ' + np.inlined.map(n => `${n.title}: ${clip(n.body, 160)}`).join(' | ') : '') : 'There are no saved notes.'}
+${chat.segments.length ? 'Earlier parts of this conversation, no longer shown word for word: ' + chat.segments.map((s, i) => `${i + 1}. ${s.title}`).join('; ') : ''}
+${recent ? 'Recent conversation:\n' + recent : 'This is the start of the conversation.'}
+
+Latest user message: "${clip(text, 900)}"
+${used ? 'Tools already used for this message:\n' + used + '\nIf that is enough to reply, choose "answer".' : ''}${hints.length ? 'Hint: ' + hints.join('; ') + '.' : ''}
+Which tool next?`;
+  const schema = { type: 'object', properties: { tool: { type: 'string', enum: tools }, input: { type: 'string' }, title: { type: 'string' } }, required: ['tool', 'input', 'title'], additionalProperties: false };
+  const d = await engine.askJSON(engine.router, prompt, schema, signal) || { tool: 'answer', input: '', title: '' };
+  if (!tools.includes(d.tool)) d.tool = 'answer';
+  if (d.tool === 'web_search' && !REQUEST.test(text) && text.split(/\s+/).length >= 8) d.tool = 'answer';      // a long statement with no question in it: the user was telling, not asking
+  return d;
+}
+const SMALLTALK = /^(hi|hello|hey|yo|thanks|thank you|thx|ok|okay|yes|no|yep|nope|bye|goodbye|good (morning|afternoon|evening|night)|cool|great|nice|lol|wow|sure)\b[\s\S]{0,12}$/i;
+const REQUEST = /\?|\b(what|who|whom|whose|when|where|why|how|which|tell|find|search|look up|give|show|list|suggest|recommend|explain|describe|compare|check|name|define|is there|are there|can you|could you|would you|do you know|i need|i want|i'd like|i wonder|let me know|any idea|latest|news)\b/i;
+const SLASH = { search: 'web_search', calc: 'calculator', note: 'save_note', recall: 'recall', read: 'read_note' };
+async function gather(chat, user, bot, idx, signal) {
+  const text = user.text.trim(); let m;
+  for (const a of user.atts || []) await runStep(chat, user, bot, { tool: 'document', title: a.name, text: a.text, input: a.name }, signal);
+  if ((m = /^\/(search|calc|note|recall|read)\s+([\s\S]+)/i.exec(text))) { await runStep(chat, user, bot, { tool: SLASH[m[1].toLowerCase()], input: m[2].trim() }, signal); return; }
+  const urls = [...new Set(text.match(/https?:\/\/[^\s<>"')\]]+/g) || [])];
+  for (const u of urls.slice(0, 2)) await runStep(chat, user, bot, { tool: 'read_page', input: u.replace(/[.,;:!?]+$/, '') }, signal);
+  if (urls.length || (user.atts || []).length) return;
+  const pm = pureMath(text);
+  if (pm) { const s = await runStep(chat, user, bot, { tool: 'calculator', input: calcClean(pm) }, signal); if (s.status === 'ok') bot.direct = `**${s.result}**`; return; }
+  if (SMALLTALK.test(text)) return;
+  // A question about the user's own things that a saved note covers never needs the router, let alone a web search.
+  const nm = noteMatch(text);
+  if (nm && /\b(my|our|mine|i|me|we)\b/i.test(text) && !REMEMBER.test(text)) { if (!notesForPrompt().inlined.includes(nm)) await runStep(chat, user, bot, { tool: 'read_note', input: nm.title }, signal); return; }
+  for (let k = 0; k < 2; k++) {
+    bot.phase = k ? 'Checking whether that is enough…' : 'Choosing how to answer…'; ui.bot(bot.id);
+    const d = await decide(chat, user, bot, idx, signal);
+    if (d.tool === 'answer' || bot.steps.some(s => s.tool === d.tool && s.input === (d.input || '').trim())) break;
+    const s = await runStep(chat, user, bot, d, signal);
+    if (d.tool === 'save_note') { if (s.status === 'ok') bot.direct = `I've saved that in your notes as **${s.title}**.`; break; }
+    if (s.status !== 'ok' || d.tool === 'calculator' || d.tool === 'read_note' || d.tool === 'recall') break;   // only a search may be followed by another step
+  }
+}
+
+const FAKE_TOOL = /\n?\s*(\[Information gathered|\[End of information|The app looked this up|<<<\s*\n|^Search results for "|^Calculator: )/im;
+// Nano sometimes adds [1] with nothing to point at. Citations with no matching source are removed (never inside code).
+const tidyCites = (text, n) => text.split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/).map((part, i) => i % 2 ? part
+  : part.replace(/(^|[\s.,;:!?)])\[(\d{1,2})\](?=[\s.,;:!?)]|$)/g, (m, pre, k) => +k >= 1 && +k <= n ? m : pre).replace(/[ \t]+([.,;:!?])/g, '$1').replace(/[ \t]+$/gm, '')).join('');
+
+// ───────────────────────────── one turn ─────────────────────────────
+async function ensureMain(chat, upto) { if (!engine.main || engine.dirty || engine.builtFor !== chat.id) await buildMain(chat, upto); }
+async function send(text, atts = []) {
+  if (state.busy || !engine.ready || (!text.trim() && !atts.length)) return;
+  const chat = state.chat; state.busy = true;
+  const ac = new AbortController(); state.abort = ac; const signal = ac.signal;
+  const user = { id: uid(), role: 'user', text: text.trim(), time: Date.now(), atts: atts.map(a => ({ name: a.name, text: a.text })) };
+  const bot = { id: uid(), role: 'assistant', text: '', time: Date.now(), steps: [], sources: [], phase: 'Thinking…' };
+  const idx = chat.turns.length; chat.turns.push(user, bot); chat.updated = Date.now();
+  ui.thread(); ui.busy(); const t0 = Date.now(); let viaMain = false;
+  try {
+    await gather(chat, user, bot, idx, signal);
+    if (bot.direct) { bot.text = bot.direct; }
+    else {
+      const ev = bot.steps.filter(s => s.evidence).map(s => s.evidence).join('\n\n');
+      let prompt = user.text || 'Please tell me the main points of what I attached.';
+      if (ev) prompt = `The app looked this up for the message below:\n<<<\n${clip(ev, B.evidence * CH * 1.4)}\n>>>\n\nReply to the user's message below using the information above. Answer directly, in your own voice, without mentioning the app or using phrases like "based on the information".${bot.sources.length ? ' Put the number of the source you used after each fact, like [1].' : ''} If the information does not answer the message, say so.\n\nUser's message: ${prompt}`;
+      bot.phase = 'Getting ready…'; ui.bot(bot.id);
+      await ensureMain(chat, idx);
+      if (engine.usage() + est(prompt) + B.reserve > engine.W && await compactWithStatus(chat, idx, bot, signal)) await ensureMain(chat, idx);
+      bot.phase = 'Writing…'; ui.bot(bot.id);
+      const session = ev ? await engine.main.clone({ signal }) : engine.main; viaMain = !ev;
+      const inner = new AbortController(), relay = () => inner.abort(); signal.addEventListener('abort', relay);
+      try {
+        for await (const chunk of session.promptStreaming(prompt, { signal: inner.signal })) {
+          bot.text += chunk; bot.phase = '';
+          const fake = bot.text.search(FAKE_TOOL);          // Nano has started inventing tool output: stop it there
+          if (fake >= 0) { bot.text = bot.text.slice(0, fake); viaMain = false; engine.dirty = true; inner.abort(); break; }
+          ui.bot(bot.id, true);
+        }
+      } catch (e) { if (e.name !== 'AbortError' || signal.aborted) throw e; }
+      finally { signal.removeEventListener('abort', relay); if (ev) session.destroy(); }
+      bot.text = tidyCites(bot.text.trim(), bot.sources.length);
+    }
+    // The main session keeps only what was said, not the evidence: tool results are used once and dropped.
+    if (!viaMain) { if (engine.main && !engine.dirty && engine.builtFor === chat.id) { try { await engine.main.append([{ role: 'user', content: sessionText(user) }, { role: 'assistant', content: sessionText(bot) }]); } catch { engine.dirty = true; } } else engine.dirty = true; }
+  } catch (e) {
+    engine.dirty = true; bot.text = bot.text.trim();
+    if (e.name === 'AbortError') bot.stopped = true; else { console.error(e); bot.error = e.message || String(e); }
+  }
+  bot.phase = ''; bot.ms = Date.now() - t0; delete bot.direct;
+  ui.bot(bot.id); ui.meter();
+  try {
+    if (chat.title === 'New chat' && chat.turns.length <= 8 && !bot.error && !bot.stopped && !SMALLTALK.test(user.text)) await nameChat(chat, user, bot);
+    const u = engine.usage() ?? chat.turns.slice(chat.compactedUpTo).reduce((a, t) => a + est(sessionText(t)), est(systemPrompt(chat)));
+    if (u > B.compactAt) await compactWithStatus(chat, chat.turns.length, null);
+  } catch (e) { console.warn(e); }
+  await db.put(chat).catch(console.warn);
+  state.busy = false; state.abort = null; ui.busy(); ui.chats(); ui.meter();
+}
+async function compactWithStatus(chat, upto, bot, signal) {
+  if (bot) { bot.phase = 'Making room: summarizing older messages…'; ui.bot(bot.id); } else ui.hint('Summarizing older messages to make room…');
+  const did = await compact(chat, upto, signal);
+  if (did) { await db.put(chat).catch(console.warn); ui.thread(); }
+  ui.hint(); return did;
+}
+async function nameChat(chat, user, bot) {
+  const r = await engine.askJSON(engine.side, `Give this conversation a title of 2 to 5 words that names its subject, as JSON.\n\nUser: ${clip(user.text || ((user.atts || [])[0] || {}).name || '', 500)}\nAssistant: ${clip(bot.text, 500)}`,
+    { type: 'object', properties: { title: { type: 'string' } }, required: ['title'], additionalProperties: false });
+  if (r && r.title) { chat.title = r.title.replace(/^["']|["'.]$/g, '').slice(0, 60); ui.chats(); ui.title(); }
+}
+
+// ───────────────────────────── the page ─────────────────────────────
+const STEP_ICON = { calculator: '🧮', web_search: '🔎', save_note: '📒', read_note: '📒', recall: '🕘', read_page: '📄', document: '📎' };
+const ui = {
+  hint(t) { $('#hint').textContent = t || 'Runs on this computer with Gemini Nano. It is a small model and can be wrong.'; },
+  busy() {
+    const b = $('#sendBtn'); b.textContent = state.busy && state.abort ? 'Stop' : 'Send';
+    b.disabled = !engine.ready || (!state.busy && !$('#input').value.trim() && !state.atts.length);
+  },
+  title() { $('#chatTitle').textContent = state.chat.title; document.title = state.chat.turns.length ? state.chat.title + ' · Nano Chat' : 'Nano Chat'; const n = state.chat.segments.length; $('#openContents').hidden = !n; $('#tocCount').textContent = n || ''; },
+  meter() {
+    const chat = state.chat, u = engine.usage() ?? (est(systemPrompt(chat)) + chat.turns.slice(chat.compactedUpTo).reduce((a, t) => a + est(sessionText(t)), 0));
+    const pct = Math.min(100, Math.round(100 * u / engine.W));
+    $('#meter .bar i').style.width = pct + '%'; $('#meter .bar').classList.toggle('hot', pct > 80); $('#meterPct').textContent = pct + '%';
+  },
+  chats() {
+    const list = $('#chatList'); list.textContent = '';
+    for (const c of [...state.chats].sort((a, b) => b.updated - a.updated)) {
+      if (!c.turns.length && c !== state.chat) continue;
+      list.append(el('div', { class: 'chatItem' + (c === state.chat ? ' on' : '') },
+        el('button', { class: 'open', title: c.title, onclick: () => openChat(c) }, c.title),
+        el('button', { class: 'del', title: 'Delete this chat', onclick: () => deleteChat(c) }, '✕')));
+    }
+  },
+  atts() {
+    const row = $('#attRow'); row.textContent = '';
+    state.atts.forEach((a, i) => row.append(el('span', { class: 'att' }, `📎 ${a.name} · ${a.text.length.toLocaleString('en-US')} characters`, el('button', { title: 'Remove', onclick: () => { state.atts.splice(i, 1); ui.atts(); ui.busy(); } }, '✕'))));
+  },
+  thread() {
+    const th = $('#thread'), chat = state.chat; th.textContent = '';
+    if (!engine.ready) { th.append(door()); return; }
+    if (!chat.turns.length) { th.append(welcome()); return; }
+    chat.turns.forEach((t, i) => {
+      const seg = chat.segments.find(s => s.to === i);
+      if (seg) th.append(el('div', { class: 'divider' }, el('details', null, el('summary', null, `Up to here, Nano now works from a summary: “${seg.title}”`), el('p', null, seg.gist || 'No summary was written for this part.'))));
+      th.append(t.role === 'user' ? userNode(t, i) : botNode(t));
+    });
+    ui.title(); ui.meter(); ui.down(true);
+  },
+  bot(id, streaming) {
+    const t = state.chat.turns.find(x => x.id === id), old = document.getElementById('t-' + id);
+    if (!t || !old) return;
+    if (streaming) { if (ui.raf) return; ui.raf = requestAnimationFrame(() => { ui.raf = 0; ui.bot(id); }); return; }
+    const open = [...old.querySelectorAll('details.step')].map(d => d.open);
+    const n = botNode(t); [...n.querySelectorAll('details.step')].forEach((d, i) => d.open = !!open[i]);
+    const stick = ui.nearBottom(); old.replaceWith(n); if (stick) ui.down();
+  },
+  nearBottom() { const s = $('#scroll'); return s.scrollHeight - s.scrollTop - s.clientHeight < 90; },
+  down(force) { const s = $('#scroll'); if (force || ui.nearBottom()) s.scrollTop = s.scrollHeight; },
+};
+function userNode(t, i) {
+  return el('div', { class: 'msg user', id: 't-' + t.id, 'data-i': i },
+    (t.atts || []).map(a => el('span', { class: 'att' }, `📎 ${a.name} · ${a.text.length.toLocaleString('en-US')} characters`)),
+    t.text ? el('div', { class: 'bubble' }, t.text) : null);
+}
+function botNode(t) {
+  const steps = (t.steps || []).map(s => {
+    if (s.status === 'running') return el('div', { class: 'status' }, el('span', { class: 'spin' }), s.label);
+    const more = el('div', { class: 'more' });
+    if (s.how) more.append(el('div', null, s.how));
+    if (s.evidence && s.tool !== 'save_note') more.append(el('div', null, 'What Nano was given:'), el('pre', null, s.evidence));
+    if (s.ms != null) more.append(el('div', null, `Took ${(s.ms / 1000).toFixed(1)} seconds.`));
+    const sum = el('summary', null, el('span', null, s.status === 'error' ? '⚠️' : STEP_ICON[s.tool]), el('span', null, s.label));
+    if (s.tool === 'save_note' && s.undo && !s.undone && s.status === 'ok') sum.append(el('button', { class: 'undo', onclick: e => { e.preventDefault(); undoNote(t, s); } }, 'Undo'));
+    if (s.undone) sum.append(el('span', { class: 'count' }, '(undone)'));
+    return el('details', { class: 'step' + (s.status === 'error' ? ' err' : '') }, sum, more);
+  });
+  const cited = new Set([...(t.text || '').matchAll(/\[(\d{1,2})\]/g)].map(m => +m[1]));      // show the sources the answer points at; all of them if it points at none
+  return el('div', { class: 'msg bot', id: 't-' + t.id },
+    steps.length ? el('div', { class: 'steps' }, steps) : null,
+    t.text ? el('div', { class: 'body', html: md(t.text, t.sources) }) : null,
+    t.phase ? el('div', { class: 'status' }, el('span', { class: 'spin' }), t.phase) : null,
+    t.stopped ? el('div', { class: 'stopped' }, 'Stopped.') : null,
+    t.error ? el('div', { class: 'status', style: 'color:var(--warn)' }, `Something went wrong: ${t.error}`) : null,
+    t.sources && t.sources.length && !t.phase ? el('div', { class: 'sources' }, t.sources.map((s, i) => s.url && (!cited.size || cited.has(i + 1)) ? el('a', { href: s.url, target: '_blank', rel: 'noopener', title: s.title }, `${i + 1}. ${s.title}`) : null)) : null);
+}
+function undoNote(t, s) {
+  const n = notes.find(x => x.id === s.undo.id);
+  if (n) { if (s.undo.body == null) notes = notes.filter(x => x !== n); else n.body = s.undo.body; }
+  s.undone = true; saveNotes(); t.text = 'Okay, I have undone that note.'; ui.bot(t.id); db.put(state.chat);
+}
+const LOGO = () => el('span', { html: '<svg viewBox="0 0 64 64" aria-hidden="true"><path fill="var(--accent)" d="M12 8h40a8 8 0 0 1 8 8v24a8 8 0 0 1-8 8H30L16 60V48h-4a8 8 0 0 1-8-8V16a8 8 0 0 1 8-8z"/><path fill="var(--accent-ink)" d="M32 13l4.2 10.8L47 28l-10.8 4.2L32 43l-4.2-10.8L17 28l10.8-4.2z"/></svg>' });
+function welcome() {
+  const tries = [
+    ['What is 17% of 2,340?', 'Uses the calculator'], ['Who designed the Eiffel Tower, and when was it finished?', 'Searches Wikipedia'],
+    ['Remember that my bike lock code is 4821', 'Saves a note'], ['How many days until New Year?', 'Does date math'],
+  ];
+  return el('div', { class: 'welcome' }, LOGO(), el('h2', null, 'What shall we talk about?'),
+    el('p', null, 'This chatbot runs on your own computer. It can calculate, look things up, keep notes, and read pages and long texts you give it.'),
+    el('div', { class: 'tries' }, tries.map(([q, sub]) => el('button', { onclick: () => send(q) }, q, el('small', null, sub)))));
+}
+function door() {
+  const d = state.door || { kind: 'checking' };
+  if (d.kind === 'none') return el('div', { class: 'door' }, el('h2', null, 'This page needs Chrome’s built-in AI'),
+    el('p', null, 'Nano Chat talks only to Gemini Nano, the small model that Chrome runs on your own computer. This browser does not offer it.'),
+    el('ul', null, el('li', null, 'Use Chrome 148 or newer on a Windows, Mac or Linux computer, or a Chromebook Plus.'), el('li', null, 'The computer needs about 22 GB of free disk space, and either a graphics card with more than 4 GB of memory or 16 GB of RAM.'), el('li', null, 'Phones and tablets are not supported yet.')),
+    d.why ? el('p', { class: 'count' }, d.why) : null);
+  if (d.kind === 'download') return el('div', { class: 'door' }, el('h2', null, 'One download first'),
+    el('p', null, 'Chrome needs to fetch Gemini Nano once (a few gigabytes). After that this page works offline, apart from web searches.'),
+    el('button', { class: 'big', onclick: () => start(true) }, 'Get the model'));
+  if (d.kind === 'loading') return el('div', { class: 'door' }, el('h2', null, d.pct != null && d.pct < 1 ? 'Downloading Gemini Nano…' : 'Waking up Gemini Nano…'),
+    d.pct != null && d.pct < 1 ? el('progress', { value: d.pct, max: 1 }) : el('div', { class: 'status', style: 'justify-content:center' }, el('span', { class: 'spin' }), 'This can take up to half a minute the first time.'));
+  if (d.kind === 'error') return el('div', { class: 'door' }, el('h2', null, 'Gemini Nano did not start'), el('p', null, d.why), el('button', { class: 'big', onclick: () => start(true) }, 'Try again'));
+  return el('div', { class: 'door' }, el('div', { class: 'status', style: 'justify-content:center' }, el('span', { class: 'spin' }), 'Checking for Gemini Nano…'));
+}
+
+// dialogs
+function dialog(title, ...body) { $('#dTitle').textContent = title; const b = $('#dBody'); b.textContent = ''; b.append(...body.flat().filter(Boolean)); const d = $('#dlg'); if (!d.open) d.showModal(); b.scrollTop = 0; }
+function showMemory() {
+  const chat = state.chat, sysText = engine.lastSystem && !engine.dirty ? engine.lastSystem : systemPrompt(chat), sys = est(sysText);
+  const total = engine.usage() ?? (sys + chat.turns.slice(chat.compactedUpTo).reduce((a, t) => a + est(sessionText(t)), 0)), recent = Math.max(0, total - sys), W = engine.W;
+  const verbatim = chat.turns.length - chat.compactedUpTo;
+  dialog('What Nano can see right now',
+    el('p', null, `Gemini Nano can hold about ${W.toLocaleString('en-US')} tokens at once, roughly ${(Math.round(W * .7 / 100) * 100).toLocaleString('en-US')} words. That has to cover its instructions, your notes, the conversation, anything a tool brings back, and the reply it is writing.`),
+    el('div', { class: 'stack' }, el('i', { class: 'k1', style: `width:${100 * sys / W}%` }), el('i', { class: 'k2', style: `width:${100 * recent / W}%` })),
+    el('div', { class: 'legend' }, el('span', null, el('b', { class: 'k1' }), `Instructions, notes and contents: ${sys.toLocaleString('en-US')}`), el('span', null, el('b', { class: 'k2' }), `Recent messages: ${recent.toLocaleString('en-US')}`), el('span', null, el('b', { style: 'background:var(--line)' }), `Free: ${Math.max(0, W - total).toLocaleString('en-US')}`)),
+    el('p', null, chat.compactedUpTo
+      ? `Nano sees the last ${verbatim} messages word for word. The ${chat.compactedUpTo} before them are covered by ${chat.segments.length} contents ${chat.segments.length === 1 ? 'entry' : 'entries'}, and it can look back into them when you ask. The whole conversation stays saved in this browser.`
+      : `Nano sees all ${verbatim} messages of this conversation word for word. When the conversation outgrows the space, older parts are summarized into a contents list, and nothing is deleted.`),
+    SIM_WINDOW ? el('p', { class: 'sub' }, `Test mode: this page is pretending the window is ${W.toLocaleString('en-US')} tokens (really ${engine.realW.toLocaleString('en-US')}).`) : null,
+    el('details', null, el('summary', null, 'Show the exact instructions Nano was given'), el('pre', null, sysText)));
+}
+function showContents() {
+  const chat = state.chat;
+  dialog('Contents of this conversation',
+    el('p', { class: 'sub' }, 'Nano wrote these entries when older messages no longer fit in its memory. It reads this list in place of those messages. Choose one to jump to that part.'),
+    chat.segments.map((s, i) => el('button', { class: 'toc', onclick: () => { $('#dlg').close(); const n = document.getElementById('t-' + chat.turns[s.from].id); if (n) n.scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
+      el('strong', null, `${i + 1}. ${s.title}`), el('small', null, s.gist), s.topics && s.topics.length ? el('small', null, 'Topics: ' + s.topics.join(', ')) : null)));
+}
+function showNotes() {
+  const list = el('div');
+  const draw = () => {
+    list.textContent = '';
+    if (!notes.length) list.append(el('p', { class: 'sub' }, 'No notes yet. Say “remember that…” in a chat, or add one here.'));
+    notes.forEach(n => list.append(el('div', { class: 'note' },
+      el('div', { class: 'row' }, el('input', { type: 'text', value: n.title, placeholder: 'Title', oninput: e => { n.title = e.target.value; saveNotes(); } }),
+        el('label', { title: 'Nano always sees a pinned note in full' }, el('input', { type: 'checkbox', checked: !!n.pinned, onchange: e => { n.pinned = e.target.checked; saveNotes(); } }), 'Pinned'),
+        el('button', { class: 'icon', title: 'Delete this note', onclick: () => { notes = notes.filter(x => x !== n); saveNotes(); draw(); } }, '🗑')),
+      el('textarea', { value: n.body, placeholder: 'What to remember', oninput: e => { n.body = e.target.value; saveNotes(); } }))));
+  };
+  draw();
+  dialog('Notes', el('p', { class: 'sub' }, 'Notes are kept in this browser and shared by all your chats. Nano sees short notes in full; when there are too many to fit, it sees the titles and opens a note when it needs one. Pin a note to keep it always in view.'),
+    list, el('button', { class: 'plain', onclick: () => { notes.push({ id: uid(), title: '', body: '', pinned: false }); saveNotes(); draw(); list.lastChild.querySelector('input').focus(); } }, '＋ Add a note'));
+}
+function showSettings() {
+  const keyBox = el('div');
+  const drawKey = () => {
+    keyBox.textContent = ''; const p = PROVIDERS[settings.provider];
+    if (settings.provider !== 'wikipedia') keyBox.append(el('label', { for: 'keyIn' }, `Your ${p.label} key`),
+      el('input', { type: 'password', id: 'keyIn', value: settings.keys[settings.provider] || '', placeholder: 'Paste the key here', autocomplete: 'off', oninput: e => { settings.keys[settings.provider] = e.target.value.trim(); saveSettings(); } }),
+      el('p', { class: 'sub', style: 'margin-top:6px' }, 'The key is stored only in this browser and sent only to that service. You can get one at ', el('a', { href: p.keyUrl, target: '_blank', rel: 'noopener' }, host(p.keyUrl)), '. Without a key, or if the service refuses it, searches use Wikipedia.'));
+  };
+  const radio = (id, title, sub) => el('label', { class: 'radio' }, el('input', { type: 'radio', name: 'prov', checked: settings.provider === id, onchange: () => { settings.provider = id; saveSettings(); drawKey(); } }), el('span', null, title, el('small', null, sub)));
+  drawKey();
+  dialog('Settings',
+    el('label', null, 'Where searches go'),
+    radio('wikipedia', 'Wikipedia', 'No key needed. Good for facts; no news.'), radio('tavily', 'The whole web, with a Tavily key', 'A search service made for AI assistants.'), radio('serper', 'The whole web, with a Serper key', 'Google results.'), keyBox,
+    el('label', { for: 'recallSel' }, 'How Nano looks back into a long conversation'),
+    el('select', { id: 'recallSel', onchange: e => { settings.recall = e.target.value; saveSettings(); } },
+      [['both', 'Contents list and keywords together'], ['contents', 'Contents list only: Nano picks an entry'], ['keywords', 'Keywords only: match words in the saved messages']].map(([v, t]) => el('option', { value: v, selected: settings.recall === v }, t))),
+    el('label', { class: 'radio', style: 'margin-top:14px' }, el('input', { type: 'checkbox', checked: settings.reader, onchange: e => { settings.reader = e.target.checked; saveSettings(); } }), el('span', null, 'Read links through r.jina.ai when a site blocks this page', el('small', null, 'Most sites do not let another page read them. The reader service fetches the page for you; it sees the link, nothing else.'))),
+    el('p', { class: 'sub', style: 'margin-top:14px' }, 'Your chats and notes never leave this browser. Only search queries, and links you ask it to read, go out.'),
+    el('p', { class: 'sub', style: 'margin-top:8px' }, 'Nano Chat is free and open source: ', el('a', { href: 'https://github.com/ToonTalk/nano-chat', target: '_blank', rel: 'noopener' }, 'how it works, and the code'), '.'));
+}
+
+// chats
+function newChat() { let c = state.chats.find(x => !x.turns.length); if (!c) { c = { id: uid(), title: 'New chat', created: Date.now(), updated: Date.now(), turns: [], segments: [], compactedUpTo: 0 }; state.chats.push(c); } openChat(c); }
+function openChat(c) { if (state.busy) return; state.chat = c; engine.dirty = true; settings.last = c.id; saveSettings(); document.body.classList.remove('menu'); ui.chats(); ui.thread(); ui.title(); ui.meter(); $('#input').focus(); }
+async function deleteChat(c) { if (state.busy || !confirm(`Delete “${c.title}”? This cannot be undone.`)) return; state.chats = state.chats.filter(x => x !== c); await db.del(c.id); if (state.chat === c) newChat(); else ui.chats(); }
+
+// composer
+const input = $('#input');
+const grow = () => { input.style.height = 'auto'; input.style.height = Math.min(200, input.scrollHeight) + 'px'; };
+function submit() { if (state.busy) { if (state.abort) state.abort.abort(); return; } const t = input.value, a = state.atts; if (!t.trim() && !a.length) return; input.value = ''; state.atts = []; grow(); ui.atts(); send(t, a); }
+input.addEventListener('input', () => { grow(); ui.busy(); });
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!state.busy) submit(); } });
+input.addEventListener('paste', e => { const t = e.clipboardData.getData('text/plain'); if (t.length > 2500) { e.preventDefault(); state.atts.push({ name: 'Pasted text', text: t }); ui.atts(); ui.busy(); } });
+$('#sendBtn').onclick = submit;
+$('#attachBtn').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = async e => { const f = e.target.files[0]; if (f) { state.atts.push({ name: f.name, text: await f.text() }); ui.atts(); ui.busy(); } e.target.value = ''; };
+$('#newChat').onclick = () => { if (!state.busy) newChat(); };
+$('#openNotes').onclick = showNotes; $('#openSettings').onclick = showSettings; $('#meter').onclick = showMemory; $('#openContents').onclick = showContents;
+$('#dClose').onclick = () => $('#dlg').close();
+$('#dlg').addEventListener('click', e => { if (e.target === $('#dlg')) $('#dlg').close(); });
+$('#menuBtn').onclick = () => document.body.classList.toggle('menu');
+$('#scroll').addEventListener('click', () => document.body.classList.remove('menu'));
+
+// start
+async function start(byClick) {
+  try {
+    if (!LM) { state.door = { kind: 'none' }; ui.thread(); return; }
+    const a = await LM.availability(LM_OPTS);
+    if (a === 'unavailable') { state.door = { kind: 'none', why: 'Chrome says this computer cannot run the model.' }; ui.thread(); return; }
+    if (a !== 'available' && !byClick) { state.door = { kind: 'download' }; ui.thread(); return; }
+    state.door = { kind: 'loading', pct: a === 'available' ? null : 0 }; ui.thread();
+    await engine.init(p => { state.door.pct = p; if (!engine.ready) ui.thread(); });
+    ui.thread(); ui.busy(); ui.meter(); input.focus();
+  } catch (e) { console.error(e); state.door = { kind: 'error', why: e.message || String(e) }; ui.thread(); }
+}
+(async () => {
+  try { state.chats = await db.all(); } catch (e) { console.warn(e); }
+  for (const c of state.chats) for (const t of c.turns) { delete t.phase; (t.steps || []).forEach(s => { if (s.status === 'running') { s.status = 'error'; s.label = 'Interrupted'; } }); }
+  const last = state.chats.find(c => c.id === settings.last && c.turns.length);
+  $('#noteCount').textContent = notes.length ? notes.length : '';
+  if (last) { state.chat = last; ui.chats(); ui.thread(); ui.title(); } else newChat();
+  start(false);
+})();
+window.NC = { state, engine, settings, B, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui };
+</script>
+</body>
+</html>
