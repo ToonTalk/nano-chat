@@ -92,12 +92,30 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 
 <h2>What could not be done</h2>
 <ul>
-  <li><b>A version inside a Claude artifact.</b> Ken asked whether one could use Gemini Nano. A probe published as an artifact showed that Chrome exposes the model's interface there but the frame's permissions switch it off, so the answer is no.</li>
+  <li><b>A version inside a Claude artifact.</b> Ken asked whether one could use Gemini Nano. A probe published as an artifact showed that Chrome exposes the model's interface there but the frame's permissions switch it off, so the answer is no. Gemini Canvas turned out to have the same wall, and a way round it, described below.</li>
   <li><b>Running on most school laptops.</b> Chrome requires a graphics card with more than 4 GB of memory, or 16 GB of RAM. Ken asked whether almost all new laptops qualify. They do not: laptops with 8 GB were returning in 2026 because of memory prices.</li>
 </ul>
 
+<h2>A way in through Gemini Canvas</h2>
+<p>After the artifact answer, Ken asked Gemini whether Google had anything like an artifact that can call a model with no key, and pasted its reply:</p>
+<blockquote>I asked Gemini if they have something like a keyless artifact and it looks like it is feasible. Can you create a test copy of the current app?</blockquote>
+<p>Gemini had described two routes, apps in Gemini Canvas and apps in Google AI Studio. Claude checked both before building. Google's own documentation did not support what Gemini said about AI Studio, and it describes those apps as projects with a server side, not single pages. For Canvas there was no official description at all, only one developer's analysis from April 2026, which said that Canvas answers a page's requests to Google's API address itself, on the viewer's Google account.</p>
+<p>Nobody could say in advance what Canvas would allow, so the test copy was built to find out. It is the same app with a coach that sends its request with an empty key, and a <b>Frame check</b> button that tries everything the app depends on and writes the results as a report. The copy is made from the app by a script, so it can be rebuilt whenever the app changes. Ken then said "You try it", and Claude pasted the copy into a Canvas in Ken's own Chrome.</p>
+<div class="scroll"><table>
+<tr><th>Question</th><th>What the frame check found inside Canvas</th></tr>
+<tr><td>Can the page use Gemini Nano?</td><td>No. Chrome reports that the frame is not permitted to use the built-in model, the same wall as in a Claude artifact.</td></tr>
+<tr><td>Does Gemini answer with no key?</td><td>Yes, in under a second, including answers as JSON and Google Search. Three model names were accepted. The two newest names, which Claude had guessed would be the ones, were refused.</td></tr>
+<tr><td>Storage and the web?</td><td>Settings, saved chats, Wikipedia and reading links all work. The microphone is not allowed.</td></tr>
+</table></div>
+<p>So the two halves were in different places: the coach could run inside Canvas, and Nano could not. The list of things Canvas grants its frame held the way round. The frame may open a new tab, and a tab is not inside the frame. The copy now offers to <b>open itself in a tab of its own</b>. There Chrome allows Nano, and the coach's requests are passed back through the Canvas page that opened the tab. Tried in Ken's Chrome, Nano got a percentage wrong with the calculator switched off, and the coach, with no key, marked it wrong and named the missing calculator.</p>
+<img src="screenshots/canvas.jpg" alt="Nano Chat in a tab opened from Gemini Canvas: Nano's wrong percentage, and the coach's review of it made with no key.">
+<p>Ken then agreed to a public link to the Canvas, and tried it himself in an incognito window. The coach failed with a message that it was "outside Gemini Canvas". It was not outside. Google gives the same refusal to a page that is not in Canvas and to a visitor who is not signed in to Google, and Claude's message had assumed the first. The message now says which it is, and what to do.</p>
+<p>Two smaller mistakes came out along the way. One line of the new code read "the coach is ready if it needs no key, or..." where the "or" bound more tightly than intended, so the coach's button never appeared; the first automated check caught it. And Claude's first plan for the new tab, opening it from a stored copy of the page, was dropped before it was tried: as Claude reads Chrome's rules, such a tab is cut off from the page that opened it, and the coach's requests depend on that connection. The page is written into an empty tab instead.</p>
+<p>None of this is documented by Google, and it may stop working. The public link is a snapshot, so it does not follow later changes to the app.</p>
+
 <h2>Still unverified</h2>
 <ul>
+  <li>The Gemini Canvas copy from a Google account other than Ken's. Signed out, the coach is refused.</li>
   <li>The coach with a real Gemini or ChatGPT key, or with a typed "Other" service. Only Claude was run for real.</li>
   <li>Voice with a real microphone and loudspeaker. The test Chrome has neither, so stand-ins were used.</li>
   <li>Tavily and Serper searches with real keys.</li>
@@ -109,6 +127,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <tr><td>The app</td><td>One HTML file, no libraries, about 1,800 lines.</td></tr>
 <tr><td>Automated checks on the real Gemini Nano</td><td>210, in five suites, all passing at the time of writing.</td></tr>
 <tr><td>Checks with a real Claude key</td><td>12 in the final run. Three runs sent 12 requests in all, estimated from the token counts at 30 to 40 US cents.</td></tr>
+<tr><td>Checks of the Gemini Canvas copy</td><td>34, with a stand-in for Canvas, plus the trials in a real Canvas described above.</td></tr>
 <tr><td>Parts with a switch</td><td>13, plus one extra.</td></tr>
 <tr><td>Time</td><td>One working session, on one day.</td></tr>
 </table></div>

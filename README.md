@@ -187,10 +187,11 @@ own, where Nano is allowed, and sends the coach's requests back through the Canv
 Tried on 22 November 2026 in Chrome 157: Nano answered in that tab, and the coach's review
 came back with no key.
 
-**Try the shared copy:** https://share.gemini.google/6t1xfHuxq0CJ and choose "Open Nano
+**Try the shared copy:** https://share.gemini.google/Lqj9AF1z9QPK and choose "Open Nano
 Chat in its own tab". Keep the Gemini tab open, because the coach's requests go through it.
-The link is a snapshot made on 22 November 2026, so it can be older than the app. It has
-been tried only from the Google account that made it.
+The link is a snapshot made on 22 November 2026, so it can be older than the app. The coach
+there needs the browser to be signed in to Google: in an incognito window Gemini refuses its
+requests. It has not been tried from a second Google account.
 
 To make your own: ask Gemini for any small HTML page in a Canvas, switch the Canvas to Code,
 replace the code with the file's contents, switch back to Preview, and choose "Open Nano

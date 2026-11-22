@@ -29,7 +29,7 @@ try {
 
   // Outside Canvas the real service must refuse the empty key, and the copy must say so plainly.
   const msg = await b.eval(`(async () => { try { await NC.askCoach('Reply with JSON.', 'Say {"ok":true}'); return 'answered?!'; } catch (e) { return e.message; } })()`);
-  check('outside Canvas, Google refuses the empty key and the copy says why', /outside Gemini Canvas/.test(msg), msg);
+  check('outside Canvas, Google refuses the empty key and the copy says what to do', /only when Nano Chat is opened from Gemini Canvas/.test(msg) && /another coach/.test(msg), msg);
 
   // A stand-in for the Canvas page: refuses the first model name, answers the second.
   await b.eval(`(() => {
@@ -100,7 +100,7 @@ try {
   const frameOrigin = `http://127.0.0.1:${frameSrv.address().port}`;
   fs.writeFileSync(path.join(shots, 'canvas-host.html'), `<!doctype html><meta charset="utf-8"><title>Stand-in for Gemini</title><body style="margin:0"><iframe style="border:0;width:100vw;height:100vh" sandbox="allow-pointer-lock allow-popups allow-forms allow-popups-to-escape-sandbox allow-downloads allow-same-origin allow-scripts" allow="xr-spatial-tracking; web-share" src="${frameOrigin}${PAGE}"></iframe>`);
   const ctxs = []; b.on('Runtime.executionContextCreated', p => ctxs.push(p.context));
-  await b.send('Page.addScriptToEvaluateOnNewDocument', { source: `if (self !== top) { const real = window.fetch; window.bridgeCalls = []; window.fetch = async (url, init) => { url = String(url); if (!/generativelanguage\\.googleapis\\.com/.test(url)) return real(url, init); const ask = String(init.body); window.bridgeCalls.push(url); return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: /pong/.test(ask) ? 'pong' : '{"ok":true}' }] } }] }), { status: 200 }); }; }` });
+  await b.send('Page.addScriptToEvaluateOnNewDocument', { source: `if (self !== top) { const real = window.fetch; window.bridgeCalls = []; window.fetch = async (url, init) => { url = String(url); if (!/generativelanguage\\.googleapis\\.com/.test(url)) return real(url, init); const ask = String(init.body); window.bridgeCalls.push(url); if (window.bridgeDeny) return new Response(JSON.stringify({ error: { message: 'Permission denied on the service.' } }), { status: 403 }); return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: /pong/.test(ask) ? 'pong' : '{"ok":true}' }] } }] }), { status: 200 }); }; }` });
   await b.goto('/captures/canvas-host.html');
   const t0 = Date.now(); let ctx;
   while (!(ctx = ctxs.findLast(c => c.origin === frameOrigin && c.auxData && c.auxData.isDefault)) && Date.now() - t0 < 10000) await new Promise(r => setTimeout(r, 200));
@@ -122,6 +122,9 @@ try {
     const r3 = await fe(`NC.own.w.NC.frameCheck()`);
     console.log('\n' + r3.replace(/^/gm, '  ') + '\n');
     check('the frame check in that tab reports Nano and the route through Canvas', /in a tab of its own/.test(r3) && /\[yes\] Gemini Nano: running/.test(r3) && /\[yes\] Gemini with no key, through the Canvas page/.test(r3));
+    // Signed out of Google, Canvas refuses the request: the same 403 as outside Canvas, but a different thing to do about it.
+    const denied = await fe(`(async () => { window.bridgeDeny = true; try { await NC.own.w.NC.askCoach('Reply with JSON.', 'Say {"ok":true}'); return 'answered?!'; } catch (e) { return e.message; } finally { window.bridgeDeny = false; } })()`);
+    check('a refusal inside Canvas is explained as not being signed in', /not signed in to Google/.test(denied) && /incognito/.test(denied) && !/another coach/.test(denied), denied);
     await fe(`NC.own.w.close()`);
   }
   frameSrv.close();

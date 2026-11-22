@@ -1203,8 +1203,14 @@ async function canvasAsk(system, msgs, { web = false, json = true, signal } = {}
     try { const t = await canvasCall(m, body, signal); canvas.model = m; return t; }
     catch (e) { if (e.name === 'AbortError') throw e; last = e; if (e.kind === 'network' || e.kind === 'timeout') break; }
   }
-  throw last.kind === 'key' ? new Error('Gemini did not take a request without a key. That is what happens outside Gemini Canvas') : last;
+  if (last.kind !== 'key') throw last;
+  // The same refusal has two causes, and the reader can only act on the right one.
+  throw new Error(inCanvas()
+    ? 'Gemini refused the request. Inside Gemini Canvas that usually means this browser is not signed in to Google, as in a private or incognito window. Sign in to Google, reload the Gemini page, and open Nano Chat from it again'
+    : 'Gemini did not take a request without a key. This coach works only when Nano Chat is opened from Gemini Canvas. Here, choose another coach in Settings and give it a key');
 }
+// Inside Canvas's frame, or in the tab that frame opened.
+function inCanvas() { if (POPPED) return true; try { return self !== top; } catch { return true; } }
 // One request to the AI whose key the user gave: a system text and a list of {role: 'user' | 'assistant', text}.
 // Each company's API is called straight from this page. `web` lets it use that company's own web search;
 // `json` asks for a JSON answer where the service has a switch for that.
@@ -1650,7 +1656,7 @@ function showSettings() {
       p.custom ? [el('label', { for: 'coachUrl' }, 'Its address'),
         el('input', { type: 'text', id: 'coachUrl', value: co.url || '', placeholder: 'https://openrouter.ai/api/v1', autocomplete: 'off', oninput: e => { co.url = e.target.value.trim(); saveCoach(); } }),
         el('p', { class: 'sub', style: 'margin-top:6px' }, 'Any service, or a program on this computer, that speaks the OpenAI chat format. For example OpenRouter, or Ollama at http://localhost:11434/v1. It has to accept requests from web pages.')] : null,
-      p.keyless ? el('p', { class: 'sub', style: 'margin-top:6px' }, 'No key is needed. Inside Gemini Canvas the request goes to Gemini on your own Google account. Outside Canvas this choice does not work.') : el('label', { for: 'coachKey' }, p.custom ? 'Its key, if it needs one' : `Your ${p.name} key`),
+      p.keyless ? el('p', { class: 'sub', style: 'margin-top:6px' }, 'No key is needed. Inside Gemini Canvas the request goes to Gemini on your own Google account, so the browser has to be signed in to Google. Outside Canvas this choice does not work.') : el('label', { for: 'coachKey' }, p.custom ? 'Its key, if it needs one' : `Your ${p.name} key`),
       p.keyless ? null : el('input', { type: 'password', id: 'coachKey', value: co.keys[co.provider] || '', placeholder: 'Paste the key here', autocomplete: 'off', oninput: e => { co.keys[co.provider] = e.target.value.trim(); saveCoach(); } }),
       p.keyless ? null : el('p', { class: 'sub', style: 'margin-top:6px' }, p.custom ? 'The key is stored only in this browser and sent only to that address.' : ['The key is stored only in this browser and sent only to that company. You can get one at ', el('a', { href: p.keyUrl, target: '_blank', rel: 'noopener' }, host(p.keyUrl)), '. Each review is charged to your key.']),
       el('label', { for: p.custom ? 'coachModel' : 'coachModelSel' }, 'Model'),
@@ -1879,11 +1885,11 @@ async function frameCheck() {
 
   // Gemini with no key
   status.textContent = 'Asking Gemini with no key…';
-  let works = '';
+  let works = '', refused = 0;
   for (const m of CANVAS_MODELS) {
     const t0 = performance.now();
     try { const t = await canvasCall(m, { contents: [{ role: 'user', parts: [{ text: 'Reply with the one word: pong' }] }] }); const ok = /pong/i.test(t); if (ok && !works) works = m; say(`Gemini with no key${POPPED ? ', through the Canvas page' : ''}, as ${m}`, ok, `${ok ? 'answered' : 'answered something else: ' + t.slice(0, 60)} in ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
-    catch (e) { say(`Gemini with no key${POPPED ? ', through the Canvas page' : ''}, as ${m}`, false, why(e)); }
+    catch (e) { if (e.kind === 'key') refused++; say(`Gemini with no key${POPPED ? ', through the Canvas page' : ''}, as ${m}`, false, why(e)); }
   }
   if (works) {
     canvas.model = works;
@@ -1912,7 +1918,7 @@ async function frameCheck() {
   say('Saving a chat as a file', null, 'cannot be checked without a click: try the Save button on a chat');
 
   const nano = rows.find(r => r.name === 'Gemini Nano');
-  rows.push({ name: 'In short', ok: null, detail: `Nano ${nano && nano.ok === true ? 'works' : nano && nano.ok === false ? 'does not work' : 'is undecided'} in this frame; Gemini with no key ${works ? 'works (' + works + ')' : 'does not work'}.` });
+  rows.push({ name: 'In short', ok: null, detail: `Nano ${nano && nano.ok === true ? 'works' : nano && nano.ok === false ? 'does not work' : 'is undecided'} in this frame; Gemini with no key ${works ? 'works (' + works + ')' : 'does not work'}.${!works && refused && inCanvas() ? ' Gemini refuses these requests when the browser is not signed in to Google, as in a private or incognito window.' : !works && refused ? ' That is expected outside Gemini Canvas.' : ''}` });
   draw(); status.textContent = 'Done. Copy the report and send it back.';
   if (works && !state.busy) ui.thread();
   return text();
