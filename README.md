@@ -242,7 +242,7 @@ own, where Nano is allowed, and sends the coach's requests back through the Canv
 Tried on 22 November 2026 in Chrome 157: Nano answered in that tab, and the coach's review
 came back with no key.
 
-**Try the shared copy:** https://share.gemini.google/wTK0xlFycRWj and choose "Open Nano
+**Try the shared copy:** https://share.gemini.google/hPbPTG5hk70a and choose "Open Nano
 Chat in its own tab". Keep the Gemini tab open, because the coach's requests go through it.
 The link is a snapshot made on 23 November 2026, with pictures and sound, so it can be older
 than the app. Opened from it in Chrome 157, Nano read the writing in a picture, and the coach
