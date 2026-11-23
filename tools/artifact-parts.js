@@ -13,13 +13,17 @@ if (!POPPED) {
   window.NC_FRAME = true;
   const use = name => self.claude && self.claude.use ? self.claude.use(name) : Promise.resolve(null);
   // One request to Claude, on the viewer's own Claude account. `turns` are {role, content}; the answer is plain data.
-  window.NC_ASK = async (turns, tier, signal) => {
+  // `images` are pictures as data: addresses; they are made into files here, in this window, as Claude requires.
+  window.NC_ASK = async (turns, tier, signal, images) => {
     const sample = await use('sample');
     if (!sample) throw { code: 'unavailable', message: 'Claude is not offered to this artifact here.' };
     const ctl = new AbortController();
     if (signal) { if (signal.aborted) ctl.abort(); else signal.addEventListener('abort', () => ctl.abort(), { once: true }); }
     const input = Array.from(turns, t => ({ role: String(t.role) === 'assistant' ? 'assistant' : 'user', content: String(t.content) }));
-    const r = await sample(input, { modelTier: ['quick', 'default', 'complex'].includes(String(tier)) ? String(tier) : 'default', cache: false, signal: ctl.signal });
+    const opts = { modelTier: ['quick', 'default', 'complex'].includes(String(tier)) ? String(tier) : 'default', cache: false, signal: ctl.signal };
+    const files = Array.from(images || [], d => { d = String(d); const bin = atob(d.slice(d.indexOf(',') + 1)), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); return new Blob([u], { type: (/^data:([^;,]+)/.exec(d) || [])[1] || 'image/jpeg' }); });
+    if (files.length) opts.images = files;
+    const r = await sample(input, opts);
     return { text: String(r.text), truncated: !!r.truncated };
   };
   // Saving a file goes through the artifact: the viewer confirms it in the artifact's own tab.
@@ -54,7 +58,8 @@ async function artifactAsk(system, msgs, { json = true, signal } = {}) {
   if (!host.NC_ASK) throw new Error('this page cannot reach Claude');
   const turns = msgs.map((m, k) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: (k ? '' : system + '\n\n') + m.text }));
   if (json) turns[turns.length - 1].content += '\n\nReply with the JSON object only.';
-  try { return (await host.NC_ASK(turns, (settings.coach.models.artifact || '').trim() || 'default', signal)).text; }
+  const images = msgs.flatMap(m => m.images || []);      // Claude is shown them with the last message
+  try { return (await host.NC_ASK(turns, (settings.coach.models.artifact || '').trim() || 'default', signal, images)).text; }
   catch (e) {
     const code = e && e.code, msg = String(e && e.message || e || '');
     if (code === 'cancelled') throw new DOMException('Stopped', 'AbortError');
@@ -65,6 +70,8 @@ async function artifactAsk(system, msgs, { json = true, signal } = {}) {
       rate_limited: 'Claude says to wait: too many requests, or your Claude usage limit has been reached. Try again later',
       refused: 'Claude declined to review this',
       unavailable: 'Claude is not offered to this artifact for you',
+      images_unavailable: 'Claude cannot be sent pictures from this artifact here. In Settings, untick “Let the coach see pictures I attach”',
+      image_rejected: 'Claude would not take one of the pictures',
     }[code] || (/held/i.test(msg) ? 'the request waited for permission to use Claude, in the artifact’s tab, and gave up. Allow it there, then ask the coach again' : `Claude could not answer (${code || msg.slice(0, 120)})`));
   }
 }

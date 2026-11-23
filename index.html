@@ -1204,8 +1204,12 @@ Then "verdict" is your verdict on ANSWER 1, and each problem also carries "n", t
 function coachPrompt(chat, bot) {
   const i = chat.turns.indexOf(bot), user = chat.turns[i - 1], f = bot.f || defaultParts(true), flat = s => (s || '').replace(/\s+\n/g, '\n').trim();
   const steps = a => (a.steps || []).map(s => `- ${s.tool} "${s.input}" (${s.status === 'ok' ? 'worked' : 'failed: ' + (s.error || '')})${s.how ? '; ' + s.how : ''}${s.evidence ? '\n' + clip(s.evidence, 3500) : ''}`).join('\n');
-  const before = chat.turns.slice(Math.max(0, i - 7), i - 1).map(t => `${t.role === 'user' ? 'Learner' : 'Nano'}: ${clip(flat(t.text), 700)}`).join('\n'), tries = coachTries(bot);
-  const about = a => (steps(a) || 'Nothing. The model answered from its own memory.') + (a.byPage ? '\n(This reply was written by the page itself, not by the model.)' : '') + (a.note ? '\n(' + a.note + ')' : '');
+  const before = chat.turns.slice(Math.max(0, i - 7), i - 1).map(t => `${t.role === 'user' ? 'Learner' : 'Nano'}: ${clip(flat(t.role === 'user' ? withMedia(t) : t.text), 700)}`).join('\n'), tries = coachTries(bot);
+  // Pictures and recordings from earlier messages that the model still has in front of it. Without this the coach was
+  // told the model had been handed nothing, and took an answer about an earlier picture for something made up.
+  const earlier = chat.turns.slice(Math.min(viewFrom(chat), i - 1), i - 1).flatMap(t => t.media || []), shown = coachImages(chat, bot).length;
+  const earlierNote = !earlier.length ? '' : `\n\nPICTURES AND RECORDINGS FROM EARLIER IN THE CONVERSATION\n${earlier.map(m => `- a ${KIND[m.kind]}, “${m.name}”${m.desc ? `. What the model made of it, in a separate request, which may be wrong: “${clip(m.desc, 400)}”` : ''}`).join('\n')}\n${f.media ? 'The model still had these in front of it for this reply: each was given to it with the message it came with.' : 'The “Pictures and sound” part was off for this reply, so the model was only ever told that these were attached.'} ${shown ? 'The pictures among them are attached to this message, so you can look at them yourself.' : 'You cannot see or hear them.'}`;
+  const about = a => (steps(a) || (earlier.length && f.media ? 'Nothing from a tool. The model answered from its own memory and from the conversation, which includes the pictures or recordings attached earlier (listed above).' : 'Nothing. The model answered from its own memory.')) + (a.byPage ? '\n(This reply was written by the page itself, not by the model.)' : '') + (a.note ? '\n(' + a.note + ')' : '');
   const said = (a, max) => (clip(flat(a.text), max) || '(empty)') + (a.stopped ? '\n(The learner stopped it before it finished.)' : '') + (a.check ? `\n(Nano's own second look at this reply: ${a.check.ok ? 'it saw no problem.' : 'it saw a problem: ' + a.check.note})` : '');
   return `Today's date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 
@@ -1213,7 +1217,7 @@ THE PARTS (key, name, whether it was on for this reply, and what it does when on
 ${FEATURES.map(p => `- ${p.k}: ${p.name}: ${f[p.k] ? 'ON' : 'OFF'}. ${p.on}`).join('\n')}
 ${[bot, ...tries].some(a => a.model) ? `\nNOT GEMINI NANO THIS TIME: an earlier experiment put another model in Nano's place. ${[bot, ...tries].map((a, k) => `Answer ${k + 1} was written by ${a.model || 'Gemini Nano'}.`).join(' ')} Where this report says "Nano" or "the model", it means whichever model wrote that answer.\n` : ''}${[bot, ...tries].map((a, k) => a.told ? `\nTHE LEARNER REWROTE THE INSTRUCTIONS the page gives the model${tries.length ? ` (in use for answer ${k + 1})` : ''}. In place of the page's usual words, the model was told:\n${clip(Object.entries(a.told).map(([key, text]) => `[${key === 'briefing' ? 'the briefing' : 'the line about ' + key}] ${text.trim() || '(nothing)'}`).join('\n'), 2500)}\nIf the reply came out the way it did because of these words, say so.\n` : '').join('')}${viewFrom(chat) > 0 ? `\nThe conversation has outgrown the model's memory: it sees only the last ${Math.max(0, i - 1 - viewFrom(chat))} messages before this one word for word${f.contents && chat.segments.length ? ', plus a contents list of the older part' : ''}.\n` : ''}
 THE CONVERSATION JUST BEFORE
-${before || '(this was the first message)'}
+${before || '(this was the first message)'}${earlierNote}
 
 THE LEARNER'S MESSAGE
 ${clip(flat(user.text), 3000)}${(user.atts || []).length ? `\n(with an attached text: ${user.atts.map(a => `"${a.name}", ${a.text.length} characters`).join('; ')})` : ''}${(user.media || []).map(m => `\n(The learner attached a ${KIND[m.kind]}, “${m.name}”. ${f.media ? 'The model was given it.' : 'The “Pictures and sound” part was off, so the model was told only that it was attached.'} ${m.kind === 'image' && coachSees() ? 'It is attached to this message, so you can look at it yourself.' : `You cannot ${m.kind === 'image' ? 'see' : 'hear'} it. ${m.desc ? `What the model itself made of it, in a separate request, which may be wrong: “${clip(m.desc, 500)}”` : 'There is no description of it.'}`})`).join('')}
@@ -1294,7 +1298,8 @@ async function askAI(system, msgs, { web = false, json = true, signal } = {}) {
 const askCoach = (system, prompt, signal, images) => askAI(system, [{ role: 'user', text: prompt, images }], { web: !!settings.coach.search, signal });
 // The coach is given Nano's description of a picture, unless the learner has said it may see pictures and its company takes them. Sound is never sent.
 const coachSees = () => !!settings.coach.pictures && ['anthropic', 'gemini', 'openai'].includes(settings.coach.provider);
-const coachImages = (chat, bot) => { const u = chat.turns[chat.turns.indexOf(bot) - 1]; return coachSees() && hasMedia(u) ? u.media.filter(m => m.kind === 'image').map(m => m.data) : []; };
+// The pictures the model had in front of it for this reply: the message's own, and those of earlier messages it still sees. At most four.
+const coachImages = (chat, bot) => { if (!coachSees()) return []; const i = chat.turns.indexOf(bot); return chat.turns.slice(Math.min(viewFrom(chat), i - 1), i).flatMap(t => t.media || []).filter(m => m.kind === 'image').slice(-4).map(m => m.data); };
 function parseLoose(text) {
   const t = String(text || '').replace(/```(?:json)?/gi, ''), a = t.indexOf('{'), b = t.lastIndexOf('}');
   if (a < 0 || b <= a) throw new Error('its answer could not be read');

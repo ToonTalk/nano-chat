@@ -33,7 +33,8 @@ try {
     const sample = async (input, opts) => {
       if (opts !== undefined && Object.getPrototypeOf(opts) !== Object.prototype) throw { code: 'invalid_request', message: 'options must be a plain object - for images pass {images}' };
       if (!(typeof input === 'string' || Array.isArray(input))) throw { code: 'invalid_request', message: 'input must be a string or a list of turns' };
-      window.claudeCalls.push({ input: JSON.parse(JSON.stringify(input)), tier: opts && opts.modelTier, cache: opts && opts.cache, signal: !!(opts && opts.signal instanceof AbortSignal) });
+      if (opts && opts.images && !Array.from(opts.images).every(x => x instanceof Blob)) throw { code: 'invalid_request', message: 'images must be Blobs' };
+      window.claudeCalls.push({ input: JSON.parse(JSON.stringify(input)), tier: opts && opts.modelTier, cache: opts && opts.cache, signal: !!(opts && opts.signal instanceof AbortSignal), images: opts && opts.images ? Array.from(opts.images).map(x => x.type + ' ' + x.size) : [] });
       if (window.claudeDeny) throw { code: 'not_granted', message: 'The viewer has not allowed this artifact to use Claude.' };
       const last = Array.isArray(input) ? input[input.length - 1].content : input;
       return { text: /JSON object only/.test(last) ? '{"verdict":"wrong","summary":"The percentage is not right.","hint":"Check it another way.","problems":[],"cause":"The calculator part was off.","experiment":"Switch the calculator on.","part":"calculator"}' : 'A plain answer from the stand-in.', truncated: false, modelTierApplied: 'default' };
@@ -92,6 +93,14 @@ try {
     check('Claude was asked once, with the coach’s instructions opening the first message', (await fe('window.claudeCalls.length')) === before + 1 && call.input[0].role === 'user' && /^You are the coach in Nano Chat/.test(call.input[0].content) && call.tier === 'default' && call.cache === false && call.signal, JSON.stringify({ tier: call.tier, cache: call.cache, head: call.input[0].content.slice(0, 40) }));
     const talk = await fe(`(async () => { const n = NC.own.w.NC, t = n.state.chat.turns.at(-1); await n.coachSay(n.state.chat, t, 'Why is it wrong?'); return t.coach.talk.at(-1).text; })()`);
     check('a question to the coach is answered the same way', /plain answer from the stand-in/.test(talk), talk);
+    check('no picture was sent while none was allowed', (await fe('window.claudeCalls.every(c => c.images.length === 0)')));
+    // pictures for the coach, once allowed: made into files in the artifact's own window, as Claude requires
+    const pics = await fe(`(async () => { const n = NC.own.w.NC, d = NC.own.w.document; n.newChat(); const c = d.createElement('canvas'); c.width = 320; c.height = 200; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, 320, 200); g.fillStyle = '#d22'; g.beginPath(); g.arc(80, 110, 50, 0, 7); g.fill();
+      const pic = await n.pictureFrom(await new Promise(r => c.toBlob(r, 'image/png')), 'circle.png'); await n.send('What is in this picture?', [], [pic]); await n.send('What color is it?');
+      n.settings.coach.pictures = true; n.showSettings(); const box = !!d.querySelector('#coachPics') && d.querySelector('#coachPics').checked; d.querySelector('#dlg').close();
+      const t = n.state.chat.turns.at(-1); await n.startCoach(n.state.chat, t); n.settings.coach.pictures = false;
+      return { box, state: t.coach.state, error: t.coach.error || '', call: window.claudeCalls.at(-1) }; })()`);
+    check('with “Let the coach see pictures I attach” ticked, the earlier picture goes to Claude as a file', pics.box && pics.state === 'done' && pics.call.images.length === 1 && /^image\/jpeg \d+$/.test(pics.call.images[0]) && /PICTURES AND RECORDINGS FROM EARLIER/.test(pics.call.input[0].content), JSON.stringify({ box: pics.box, state: pics.state, error: pics.error, images: pics.call.images }));
     const denied = await fe(`(async () => { window.claudeDeny = true; try { await NC.own.w.NC.askCoach('Reply with JSON.', 'Say {"ok":true}'); return 'answered?!'; } catch (e) { return e.message; } finally { window.claudeDeny = false; } })()`);
     check('when Claude is not allowed, the coach says where to allow it', /has not been allowed to use Claude/.test(denied) && /artifact’s tab/.test(denied), denied);
 

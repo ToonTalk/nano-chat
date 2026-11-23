@@ -162,11 +162,18 @@ try {
   await b.eval(`Object.assign(NC.settings.coach, { mode: 'ask', provider: 'anthropic', keys: { anthropic: 'made-up' }, pictures: false })`);
   let cp = await b.eval(`NC.coachPrompt(NC.state.chat, NC.state.chat.turns[1])`);
   check('the coach is told of the picture and given Nano’s description, not the picture', /The learner attached a picture, “shapes\.png”\. The model was given it\. You cannot see it\./.test(cp) && /What the model itself made of it/.test(cp) && (await b.eval(`NC.coachImages(NC.state.chat, NC.state.chat.turns[1]).length`)) === 0, cp.slice(cp.indexOf('The learner attached'), cp.indexOf('The learner attached') + 260));
+  // a follow-up question about the picture: the coach is told it was attached earlier, and what the model made of it
+  // (Ken found the coach saying "Nano was handed nothing for this message, so the claim may be made up")
+  await b.eval(`(async () => { await NC.send('What else is in the picture?'); })()`);
+  cp = await b.eval(`NC.coachPrompt(NC.state.chat, NC.state.chat.turns[3])`);
+  check('for a follow-up, the coach is told of the earlier picture, that the model still had it, and what it made of it', /PICTURES AND RECORDINGS FROM EARLIER IN THE CONVERSATION\n- a picture, “shapes\.png”\. What the model made of it/.test(cp) && /The model still had these in front of it for this reply/.test(cp) && /Learner: What is written in this picture\?[^\n]*\n?\[With a picture, “shapes\.png”/.test(cp) && !/WHAT THE PAGE HANDED TO THE MODEL FOR THIS MESSAGE\nNothing\. The model answered from its own memory\./.test(cp), cp.slice(cp.indexOf('THE CONVERSATION JUST BEFORE'), cp.indexOf('THE CONVERSATION JUST BEFORE') + 600));
   await b.eval(`NC.showSettings()`);
   check('Settings has a switch for letting the coach see pictures, off to begin with', await b.eval(`!!document.querySelector('#coachPics') && !document.querySelector('#coachPics').checked && /Recordings are never sent/.test(document.querySelector('#dBody').textContent)`));
   await b.eval(`document.querySelector('#coachPics').click(); document.querySelector('#dlg').close()`);
   cp = await b.eval(`NC.coachPrompt(NC.state.chat, NC.state.chat.turns[1])`);
   check('switched on, the coach is told the picture is attached', (await b.eval(`NC.settings.coach.pictures`)) === true && /It is attached to this message, so you can look at it yourself/.test(cp) && (await b.eval(`NC.coachImages(NC.state.chat, NC.state.chat.turns[1])[0].startsWith('data:image/jpeg')`)));
+  cp = await b.eval(`NC.coachPrompt(NC.state.chat, NC.state.chat.turns[3])`);
+  check('and for the follow-up, the earlier picture goes to the coach too', (await b.eval(`NC.coachImages(NC.state.chat, NC.state.chat.turns[3]).length`)) === 1 && /The pictures among them are attached to this message/.test(cp));
   const sent = await b.eval(`(async () => { const real = window.fetch, out = {}; const reply = { anthropic: { content: [{ type: 'text', text: 'ok' }] }, gemini: { candidates: [{ content: { parts: [{ text: 'ok' }] } }] }, openai: { choices: [{ message: { content: 'ok' } }] } };
     for (const who of ['anthropic', 'gemini', 'openai']) { NC.settings.coach.provider = who; NC.settings.coach.keys[who] = 'made-up'; window.fetch = async (url, init) => { out[who] = JSON.parse(init.body); return new Response(JSON.stringify(reply[who]), { status: 200, headers: { 'content-type': 'application/json' } }); }; await NC.askAI('s', [{ role: 'user', text: 'Look.', images: [PIC.data] }], {}); }
     window.fetch = real; NC.settings.coach.provider = 'anthropic';

@@ -8,7 +8,7 @@
 //    unavailable, and the search settings are left out.
 // Every change replaces a piece of text that must occur exactly once, so a change to index.html that this script
 // does not understand stops the build instead of producing a broken copy. Publish it with
-// capabilities {sample: {}, downloads: true}.
+// capabilities {sample: {images: true}, downloads: true}.
 import fs from 'node:fs';
 import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
@@ -78,6 +78,9 @@ before('settings: no key note', "el('p', { class: 'sub', style: 'margin-top:6px'
 before('settings: no model label', "el('label', { for: p.custom ? 'coachModel' : 'coachModelSel' }, 'Model'),", 'p.keyless ? null : ');
 swap('settings: no model list', "p.custom ? null : el('select', { id: 'coachModelSel'", "p.custom || p.keyless ? null : el('select', { id: 'coachModelSel'");
 swap('settings: no web search for the coach', "p.custom ? null : el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!co.search,", "p.custom || p.keyless ? null : el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!co.search,");
+// The coach may be shown pictures: Claude takes them through the artifact, when the viewer allows it in Settings.
+swap('coach sees pictures', "const coachSees = () => !!settings.coach.pictures && ['anthropic', 'gemini', 'openai'].includes(settings.coach.provider);", "const coachSees = () => !!settings.coach.pictures && ['anthropic', 'gemini', 'openai', 'artifact'].includes(settings.coach.provider);");
+swap('settings: pictures for the coach', "p.custom || p.keyless ? null : el('label', { class: 'radio', style: 'margin-top:10px' }, el('input', { type: 'checkbox', id: 'coachPics'", "p.custom ? null : el('label', { class: 'radio', style: 'margin-top:10px' }, el('input', { type: 'checkbox', id: 'coachPics'");
 swap('settings: about the coach', "about('The coach is a much larger model run by a company, reached over the internet with a key that you get from that company and that is charged for each use.",
   "about('The coach is Claude, a much larger model, used through your own Claude account: each review counts toward your Claude usage limits, as a chat message would.");
 

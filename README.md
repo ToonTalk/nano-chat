@@ -259,7 +259,7 @@ is documented by Google, and it may stop working.
 
 `artifact/nano-chat-artifact.html` is the app made into a claude.ai artifact by
 `node tools/build-artifact.mjs`; `node tools/test-artifact.mjs` checks it with a stand-in for
-the artifact viewer. Publish it as an artifact with the capabilities `sample` and `downloads`.
+the artifact viewer. Publish it as an artifact with the capabilities `sample` (with images) and `downloads`.
 
 - Chrome does not let an artifact's frame use Gemini Nano, so, as in Gemini Canvas, the copy
   opens itself in a tab of its own.
