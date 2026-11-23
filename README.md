@@ -192,6 +192,9 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   - `node tools/test-coach-live.mjs`: the coach with a real Claude key, read from the
     `ANTHROPIC_API_KEY` environment variable (add `web` to try its web search too). It costs
     a few cents a run. The key stays in the test process and is never put into the page.
+  - `node tools/build-artifact.mjs`: builds `artifact/nano-chat-artifact.html`, a copy to publish
+    as a Claude artifact (see below). `node tools/test-artifact.mjs` checks it, with a stand-in
+    for the artifact viewer.
   - `node tools/build-canvas.mjs`: builds `canvas/nano-chat-canvas.html`, a test copy to paste
     into a Gemini Canvas (see below). `node tools/test-canvas.mjs` checks it, with a stand-in
     for Canvas.
@@ -252,10 +255,24 @@ replace the code with the file's contents, switch back to Preview, and choose "O
 Chat in its own tab". The 🧪 Frame check button reports what the frame allows. None of this
 is documented by Google, and it may stop working.
 
-The same trick was tried in a Claude artifact with a small probe: Nano ran in the tab it
-opened, and Claude answered there on the owner's account. Web search and reading links are
-blocked there, and Claude's rules say such a tab opens only for some viewers in the owner's
-own organization, so no artifact version has been built. [How it was
+## A copy for Claude artifacts
+
+`artifact/nano-chat-artifact.html` is the app made into a claude.ai artifact by
+`node tools/build-artifact.mjs`; `node tools/test-artifact.mjs` checks it with a stand-in for
+the artifact viewer. Publish it as an artifact with the capabilities `sample` and `downloads`.
+
+- Chrome does not let an artifact's frame use Gemini Nano, so, as in Gemini Canvas, the copy
+  opens itself in a tab of its own.
+- The coach is Claude, on the viewer's own Claude account, so no key is needed. Each review
+  counts toward the viewer's Claude usage limits, and the first one asks permission.
+- Saving a chat goes through the artifact, which asks the viewer in its own tab.
+- An artifact may not reach other websites, so web search and reading links cannot work. The
+  copy shows those two parts with their switches off and says why.
+
+Claude's rules for artifacts say that such a tab opens only for some viewers: those signed in
+to Claude in the same organization as the artifact's owner. Tried on 23 November 2026 by its
+owner in Chrome 157, Nano ran in the tab, read the writing in a picture, and the artifact
+offered to save a chat. It has not been tried from another account. [How it was
 made](https://toontalk.github.io/nano-chat/making-of.html#artifact-tab) has the details.
 
 ## License

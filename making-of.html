@@ -29,9 +29,9 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <nav><a class="brand" href="./">Nano Chat</a><a href="student-guide.html">For students</a><a href="teacher-guide.html">For teachers</a><a class="here" href="making-of.html">How it was made</a><a href="older-models.html">Older models</a><a href="https://github.com/ToonTalk/nano-chat">Code</a></nav>
 <main>
 <h1>How Nano Chat was made</h1>
-<p class="lead">Nano Chat was built in one long working session on November 22, 2026, by Ken Kahn and Claude. This is an account of that session: what was asked, what was measured, what went wrong, and what is still unverified.</p>
+<p class="lead">Nano Chat was built over two days, November 22 and 23, 2026, by Ken Kahn and Claude. This is an account of that work: what was asked, what was measured, what went wrong, and what is still unverified.</p>
 
-<div class="note">Ken set the direction and judged the results. Claude (Anthropic's Claude Fable 5.2, working in Claude Code on Ken's computer) wrote the page, tested it against the real model, and wrote this report from the record of the session. Ken's own account is in his post, <a href="https://docs.google.com/document/d/100TuZ1hSkCIE6gXLNsJulXOVqc7B5ghLfRsPteOIb-Y/edit?usp=sharing">Claude helped me make an app for exploring how to turn an LLM into a chatbot</a>.</div>
+<div class="note">Ken set the direction and judged the results. Claude (Anthropic's Claude Fable 5.2, and for the last stretch of the second day Claude Opus 5.5, working in Claude Code on Ken's computer) wrote the page, tested it against the real model, and wrote this report from the record of the session. Ken's own account is in his post, <a href="https://docs.google.com/document/d/100TuZ1hSkCIE6gXLNsJulXOVqc7B5ghLfRsPteOIb-Y/edit?usp=sharing">Claude helped me make an app for exploring how to turn an LLM into a chatbot</a>.</div>
 
 <h2>The request</h2>
 <blockquote>Let's create a web page that is a nice chatbot that relies exclusively on Gemini Nano in Chrome. First let's talk about how to address some of its limitations such as the size of the context window. And can it when appropriate use a few tools such as web search and a calculator?</blockquote>
@@ -123,7 +123,15 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <tr><td>Wikipedia, and reading links</td><td>Blocked</td><td>Blocked: the tab inherits the artifact's rules</td></tr>
 </table></div>
 <p>So for Ken it would work, with Claude as the coach at no cost beyond his own plan's limits, but with no web search and no reading of links. Two things went wrong on the way. The tab's first request to Claude was refused because its settings had been made in the tab's own window; the artifact page now makes the request for it. And the very first request waited on the permission question and gave up before Ken had answered it, so a real version would have to ask for that permission before the first review.</p>
-<p>What decides it is who can open such a tab. Claude's rules for artifacts say that a new tab opens only for some signed-in viewers in the artifact owner's own organization; for everyone else the page gets nothing. That limit was read in the rules, not tried with another account. If it holds, an artifact version would run for its owner and some colleagues, and not for a class. No artifact version of Nano Chat has been built.</p>
+<p>What decides it is who can open such a tab. Claude's rules for artifacts say that a new tab opens only for some signed-in viewers in the artifact owner's own organization; for everyone else the page gets nothing. That limit was read in the rules, not tried with another account. If it holds, an artifact version would run for its owner and some colleagues, and not for a class.</p>
+<p>Ken asked for one anyway. Like the Canvas copy, it is made from the app by a script, and it differs from the app in four ways:</p>
+<ul>
+  <li>It opens in a tab of its own.</li>
+  <li>Its coach is Claude, on the viewer's own Claude account, with a button that asks for permission before the first review needs it. The request is made by the artifact page on the tab's behalf.</li>
+  <li>Saving a chat goes through the artifact, which asks the viewer in its own tab.</li>
+  <li>Web search and reading links appear in the parts panel as parts that cannot be switched on, with the reason.</li>
+</ul>
+<p>Its automated test stands in for the artifact viewer, including a Claude that refuses requests made in the wrong window. It caught one fault: a saved chat came out with almost no styling, because inside an artifact the first style sheet on the page is the viewer's, not the app's. Then the artifact was published privately and tried in Ken's Chrome: Nano started in the tab, read the writing in a picture, the calculator answered, requests to other sites were refused, and saving a chat brought up the artifact's own "Let this artifact download a file?" prompt.</p>
 
 <h2 id="other-models">An idea that was dropped: other models in Nano's place</h2>
 <p>Gemini Nano needs a fairly strong desktop computer. On November 23 Ken asked whether people without one could be given something else:</p>
@@ -160,10 +168,29 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <h3>Where it was left</h3>
 <p>Ken decided to drop the switch, and it has been taken out of the page. Nano Chat is again what its first request asked for: a chatbot that relies only on Gemini Nano. The file as first published is in the project's <a href="https://github.com/ToonTalk/nano-chat/commit/78cd80f">history</a>. Two things would have to change before the idea is worth trying again: the model would have to keep its reading of a prompt from one request to the next, and the processor would have to be allowed to use all its cores, which the place this page is hosted does not permit.</p>
 
+<h2 id="day-two">The second day: what using it turned up</h2>
+<p>Most of the second day's work began with Ken using the app, or reading what it said, and reporting what he found.</p>
+<ul>
+  <li><b>Older models.</b> Ken wanted to compare Nano with a model from before. The result, Nano beside GPT-2 and beside the answers the first ChatGPT gave in December 2022, is in <a href="older-models.html">its own report</a>. Ken judged that most of it would not interest teachers or students, so the guides link only to its thirty examples, and that section was rewritten to stand on its own, with the judge's scores behind a click.</li>
+  <li><b>The instructions.</b> Ken asked: "The system prompt is provided by the app, right? If so, let's make it editable in settings." Settings now shows the words the page gives Nano, and they can be rewritten. Told it was a pirate called Captain Byte, Nano answered "Who are you?" with "I be Captain Byte, a pirate of the digital seas, Arr!"</li>
+  <li><b>A question for the coach.</b> Ken asked Nano to translate an answer into French and wanted to ask the coach whether the translation was good, but the box for questions to the coach appeared only after its findings were opened. It now appears with the coach's hint as well.</li>
+  <li><b>Languages.</b> The teacher guide said "English only", and Ken pasted Nano's own claim to know many languages. Tested with the page asking for English: Nano answered correctly in French, Swedish and Japanese, and named Swansea as the capital of Wales when asked in Welsh. Chrome itself lists English, Spanish, Japanese, French and German. The guide now says so, and suggests Nano's claim to know "hundreds" of languages as something for students to test.</li>
+  <li><b>A shared computer.</b> Chats and notes stay in the browser for the next person to read. Settings can now delete all chats, all notes, or everything including settings and keys, and a key can be kept only until the tab is closed, as Ken asked.</li>
+  <li><b>Explanations.</b> Ken found the parts' one-line descriptions hard to follow, "Looking back" especially. Every part now has a "More about this" with an example, and so do the less obvious settings.</li>
+  <li><b>Pictures and sound.</b> Ken pointed out that Gemini Nano takes images and audio. Measured first: a picture of any size took about 263 of Nano's 9,216 tokens, and a six-second recording 49. The page now attaches pictures and sound files, takes photos and records sound, and asks Nano afterwards to put each into words for the contents list, for looking back, and for the coach. The coach gets that description, and a picture itself only if a setting allows it.</li>
+</ul>
+<p>Two reports from Ken found faults in the pictures-and-sound work.</p>
+<ul>
+  <li><b>"I am a text-based AI."</b> Ken attached a recording and asked what Nano heard. It said it could not hear sounds. Repeating that in tests showed the recording was reaching Nano: in a chat that already held a picture, it denied hearing about half the time, sometimes while quoting the recording. A line added to its instructions, saying it can see and hear what is attached, still left 5 denials in 10. A note at the head of the message itself, "Attached to this message: a sound recording, which you can hear", brought that to none in 15.</li>
+  <li><b>"It seemed to work but then it didn't."</b> Ken sent a chat he had saved. He had started with every part off. The page offered a second try with pictures and sound switched on, and that try answered correctly. But a try changes nothing else, and his next question went on from the first answer, with the part still off, so Nano refused again, three times. Nothing on the screen had said so. The page now says it under the tries, offers "Carry on from this answer, with these parts", and points out the switched-off part on later questions too.</li>
+</ul>
+<p>Claude's own mistakes on the second day were smaller: a test that expected 33 days until Christmas, which was right only on the day it was written; a test that expected Nano to write a sum in one particular way; and, in the artifact copy, a saved chat without its styles. Each was found by a test failing.</p>
+
 <h2>Still unverified</h2>
 <ul>
   <li>The Gemini Canvas copy from a Google account other than Ken's. Signed out, the coach is refused.</li>
-  <li>The artifact probe from any account other than Ken's, as the owner.</li>
+  <li>The artifact copy, and the probe before it, from any account other than Ken's, as the owner.</li>
+  <li>Photographs of handwriting, recordings in noisy rooms, and a real camera and microphone in the app: the tests used drawn pictures, a computer voice, and Chrome's stand-in devices.</li>
   <li>The coach with a real Gemini or ChatGPT key, or with a typed "Other" service. Only Claude was run for real.</li>
   <li>Voice with a real microphone and loudspeaker. The test Chrome has neither, so stand-ins were used.</li>
   <li>Tavily and Serper searches with real keys.</li>
@@ -172,12 +199,13 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 
 <h2>By the numbers</h2>
 <div class="scroll"><table>
-<tr><td>The app</td><td>One HTML file, no libraries, about 1,800 lines.</td></tr>
-<tr><td>Automated checks on the real Gemini Nano</td><td>210, in five suites, all passing at the time of writing.</td></tr>
+<tr><td>The app</td><td>One HTML file, no libraries: about 1,800 lines after the first day, about 2,100 after the second.</td></tr>
+<tr><td>Automated checks on the real Gemini Nano</td><td>210, in five suites, after the first day. 320, in nine suites, after the second, all passing at the time of writing.</td></tr>
 <tr><td>Checks with a real Claude key</td><td>12 in the final run. Three runs sent 12 requests in all, estimated from the token counts at 30 to 40 US cents.</td></tr>
 <tr><td>Checks of the Gemini Canvas copy</td><td>34, with a stand-in for Canvas, plus the trials in a real Canvas described above.</td></tr>
+<tr><td>Checks of the artifact copy</td><td>24, with a stand-in for the artifact viewer, plus the trial in Ken's Chrome described above.</td></tr>
 <tr><td>Parts with a switch</td><td>13 on the first day, plus one extra. A fourteenth, for pictures and sound, came the next day.</td></tr>
-<tr><td>Time</td><td>One working session, on one day.</td></tr>
+<tr><td>Time</td><td>Two days: one long session on November 22, and a second on November 23.</td></tr>
 </table></div>
 
 <h2>Run it yourself</h2>
