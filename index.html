@@ -117,7 +117,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .note { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
 .note .row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; } .note .row input[type=text] { font-weight: 600; }
 .note .row label { margin: 0; font-weight: 400; font-size: 13px; white-space: nowrap; display: flex; gap: 4px; align-items: center; }
-.plain { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px 14px; }
+.plain { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px 14px; } .plain.danger { color: var(--warn); border-color: var(--warn); }
 .stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--line); margin: 10px 0 6px; }
 .stack i { display: block; height: 100%; } .k1 { background: #7c6fd6; } .k2 { background: var(--accent); }
 .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13.5px; color: var(--muted); margin-bottom: 12px; } .legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; }
@@ -248,7 +248,14 @@ const db = {
   del(id) { return this.tx('readwrite', s => s.delete(id)); },
 };
 const settings = Object.assign({ provider: 'wikipedia', keys: {}, recall: 'both', reader: true, smallWindow: false }, load('nanochat.settings', {}));
-const saveSettings = () => store('nanochat.settings', settings);
+// Keys are kept with the other settings, unless the learner asks for them to last only as long as this tab (settings.sessionKeys).
+// Then they go to the tab's own storage, which the browser empties when the tab is closed, and are left out of what is saved.
+const tabStore = (k, v) => { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, JSON.stringify(v)); } catch {} };
+const saveSettings = () => {
+  if (!settings.sessionKeys) { tabStore('nanochat.keys', null); store('nanochat.settings', settings); return; }
+  tabStore('nanochat.keys', { search: settings.keys, coach: (settings.coach || {}).keys });
+  store('nanochat.settings', { ...settings, keys: {}, coach: { ...(settings.coach || {}), keys: {} } });
+};
 // What the “Instructions” part tells Nano before the first message. These are the page's own words. Each piece can be
 // rewritten in Settings, and settings.told then holds only the pieces that were changed. {date} stands for today's date.
 const TOLD = {
@@ -288,6 +295,7 @@ const defaultParts = on => Object.fromEntries(FEATURES.map(f => [f.k, f.extra ? 
 settings.features = Object.assign(defaultParts(true), settings.features || {});
 settings.coach = Object.assign({ mode: 'off', provider: 'anthropic', keys: {}, models: {}, quiz: true, search: false }, settings.coach || {});
 settings.voice = Object.assign({ input: false, auto: true, online: false, output: false, voice: '', rate: 1 }, settings.voice || {});
+if (settings.sessionKeys) { let k = {}; try { k = JSON.parse(sessionStorage.getItem('nanochat.keys')) || {}; } catch {} settings.keys = k.search || {}; settings.coach.keys = k.coach || {}; }     // keys kept for this tab only
 const partsOn = (F = settings.features) => CORE.filter(f => F[f.k]).length;
 function setPart(k, v) { settings.features[k] = !!v; saveSettings(); engine.dirty = true; ui.parts(); if (!state.busy) ui.thread(); else ui.meter(); }
 function setParts(F) { settings.features = Object.assign(defaultParts(true), F); saveSettings(); engine.dirty = true; ui.parts(); if (!state.busy) ui.thread(); }
@@ -513,15 +521,15 @@ function md(src, sources = []) {
 
 // ───────────────────────────── the model ─────────────────────────────
 let LM = self.LanguageModel;
-// An experiment: ?model=gpt2 runs the page on GPT-2, a model from 2019, in place of Gemini Nano (see gpt2.js).
-// Everything else stays as it is, so the same parts can be tried around a much older model.
+// An experiment: ?model=gemma-270m (or qwen-0.6b, gpt2, ...) runs the page on an open model in place of Gemini Nano (see open-models.js).
+// Everything else stays as it is, so the same parts can be tried around a smaller or a much older model.
 const ALT_KEY = (params.get('model') || '').toLowerCase();
 let alt = null;
 function loadAlt() {
   return new Promise((res, rej) => {
-    const done = () => { const a = self.NanoChatAlt && self.NanoChatAlt.make(ALT_KEY, { frame: params.get('frame'), device: params.get('device') }); a ? res(a) : rej(new Error(`This page does not know a model called “${ALT_KEY}”. Try ?model=gpt2.`)); };
+    const done = () => { const a = self.NanoChatAlt && self.NanoChatAlt.make(ALT_KEY, { frame: params.get('frame'), device: params.get('device') }); a ? res(a) : rej(new Error(`This page does not know a model called “${ALT_KEY}”. Try ?model=gemma-270m.`)); };
     if (self.NanoChatAlt) return done();
-    const s = document.createElement('script'); s.src = 'gpt2.js'; s.onload = done; s.onerror = () => rej(new Error('The file gpt2.js, which runs the older model, could not be loaded.')); document.head.append(s);
+    const s = document.createElement('script'); s.src = 'open-models.js'; s.onload = done; s.onerror = () => rej(new Error('The file open-models.js, which runs the other model, could not be loaded.')); document.head.append(s);
   });
 }
 const LM_OPTS = { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] };
@@ -1279,7 +1287,7 @@ const STEP_ICON = { calculator: '🧮', web_search: '🔎', save_note: '📒', r
 const ui = {
   hint(t) {
     $('#hint').style.color = alt && !t ? 'var(--warn)' : '';
-    $('#hint').textContent = t || (alt ? `An experiment: this tab runs ${alt.info.name} (OpenAI, ${alt.info.date}) on this computer, not Gemini Nano. Where the page says Nano, read ${alt.info.name}.`
+    $('#hint').textContent = t || (alt ? `An experiment: this tab runs ${alt.info.name} (${alt.info.by}, ${alt.info.date}) on this computer, not Gemini Nano. Where the page says Nano, read ${alt.info.name}.`
       : 'Runs on this computer with Gemini Nano. It is a small model and can be wrong.') +
       (coachReady() ? ` Coach on: ${coachName()} is sent ${settings.coach.mode === 'every' ? 'every reply' : 'the replies you ask it about'}.` : '');
   },
@@ -1385,12 +1393,19 @@ function coachNode(t) {
     el('div', { class: 'tools' }, (many ? [...Array.from({ length: c.n }, (x, k) => ['a' + (k + 1), ansLabel(k, true)]), ['unsure', 'Not sure']] : [['right', 'Looks right'], ['off', 'Something is off'], ['unsure', 'Not sure']]).map(([g, label]) => btn(label, () => { c.guess = g; redraw(); })),
       c.typing ? null : btn('I’ll say what I think…', () => { c.typing = true; redraw(); const i = document.getElementById('cv-' + t.id); if (i) i.focus(); })),
     c.typing ? el('form', { class: 'ask', onsubmit: e => { e.preventDefault(); const v = e.target.querySelector('textarea').value.trim(); if (!v) return; c.guess = 'own'; c.view = v; delete c.typing; redraw(); if (c.state === 'done') coachSay(chat, t, v); } },
-      el('textarea', { id: 'cv-' + t.id, rows: 2, placeholder: many ? 'Which answer is best, and why?' : 'What is right or wrong about this reply?', 'aria-label': 'What you think of the reply', onkeydown: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.target.form.requestSubmit(); } } }), el('button', { class: 'plain sm' }, 'Tell the coach')) : null);
+      el('textarea', { id: 'cv-' + t.id, rows: 2, placeholder: many ? 'Which answer is best, and why? Or ask the coach a question.' : 'What is right or wrong about this reply? Or ask the coach a question.', 'aria-label': 'What you think of the reply, or a question for the coach', onkeydown: e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.target.form.requestSubmit(); } } }), el('button', { class: 'plain sm' }, 'Tell the coach')) : null);
   if (c.state === 'loading') return box(el('div', { class: 'status' }, el('span', { class: 'spin' }), many ? `The coach is reading all ${c.n} answers…` : 'The coach is reading the reply…'));
   if (c.state === 'error') return box(el('div', null, `The coach could not answer: ${c.error}.`), el('div', { class: 'tools' }, btn('Ask again', () => startCoach(chat, t, true))));
   const flawed = c.verdict === 'wrong' || c.verdict === 'minor';
+  // The conversation with the coach, and the box for asking it something. Shown with the hint as well as with the full review,
+  // so that a learner with a question of their own does not have to find the right button first.
+  const talking = (c.talk || []).length > 0, talkArea = hinting => [
+    talking ? el('div', { class: 'talk' }, c.talk.map(m => el('div', { class: 'tmsg ' + m.who }, el('b', null, m.who === 'you' ? 'You' : 'Coach'), m.who === 'you' ? el('div', null, m.text) : el('div', { html: md(m.text) })))) : null,
+    c.busy ? el('div', { class: 'status' }, el('span', { class: 'spin' }), 'The coach is answering…') : null,
+    coachReady() && !c.busy ? el('form', { class: 'ask', onsubmit: e => { e.preventDefault(); const v = e.target.querySelector('input').value.trim(); if (v) coachSay(chat, t, v); } },
+      el('input', { type: 'text', id: 'ct-' + t.id, placeholder: talking ? 'Say more to the coach…' : hinting ? 'Or ask the coach your own question about this reply…' : 'Ask the coach about this reply…', 'aria-label': 'Message to the coach', autocomplete: 'off' }), el('button', { class: 'plain sm' }, 'Ask')) : null];
   if (!coachShown(c)) return box(el('div', null, c.guess === 'right' ? 'You said it looks right. The coach is not so sure.' : 'The coach sees something worth a closer look.'),
-    c.hint ? el('p', null, el('b', null, 'A hint: '), c.hint) : null, el('div', { class: 'tools' }, btn('Show what the coach found', () => { c.shown = true; redraw(); })));
+    c.hint ? el('p', null, el('b', null, 'A hint: '), c.hint) : null, el('div', { class: 'tools' }, btn('Show what the coach found', () => { c.shown = true; redraw(); })), talkArea(true));
   const pick = /^a\d+$/.test(c.guess || '') ? +c.guess.slice(1) : 0;
   const said = many ? (!c.best ? (pick ? `You picked ${ansLabel(pick - 1)}. ` : '') + 'The coach does not think one answer is clearly better than the others.'
       : pick === c.best ? `You picked ${ansLabel(pick - 1)}, and the coach agrees.` : (pick ? `You picked ${ansLabel(pick - 1)}. ` : '') + `The coach thinks ${ansLabel(c.best - 1)} is the best.`)
@@ -1406,10 +1421,7 @@ function coachNode(t) {
       c.experiment ? el('p', null, el('b', null, 'Try next: '), c.experiment) : null,
       k ? el('div', { class: 'tools' }, btn(`Try again with ${PART[k].name} ${f[k] ? 'off' : 'on'}`, () => rerun(t.id, { ...f, [k]: !f[k] }))) : null,
       el('p', { class: 'sub' }, `A second opinion from ${c.by}${c.web ? ', which could search the web' : ''}. It can be wrong too.`)),
-    (c.talk || []).length ? el('div', { class: 'talk' }, c.talk.map(m => el('div', { class: 'tmsg ' + m.who }, el('b', null, m.who === 'you' ? 'You' : 'Coach'), m.who === 'you' ? el('div', null, m.text) : el('div', { html: md(m.text) })))) : null,
-    c.busy ? el('div', { class: 'status' }, el('span', { class: 'spin' }), 'The coach is answering…') : null,
-    coachReady() && !c.busy ? el('form', { class: 'ask', onsubmit: e => { e.preventDefault(); const v = e.target.querySelector('input').value.trim(); if (v) coachSay(chat, t, v); } },
-      el('input', { type: 'text', id: 'ct-' + t.id, placeholder: (c.talk || []).length ? 'Say more to the coach…' : 'Ask the coach about this reply…', 'aria-label': 'Message to the coach', autocomplete: 'off' }), el('button', { class: 'plain sm' }, 'Ask')) : null,
+    talkArea(false),
     stale);
 }
 // A second try can take the first answer's place in the conversation. Nano only ever remembers one answer per message: this one.
@@ -1506,7 +1518,7 @@ function welcome() {
 function door() {
   const d = state.door || { kind: 'checking' };
   if (alt && d.kind !== 'none') {                      // the experiment with an older model has its own front door
-    const i = alt.info, about = `${i.name} is a language model OpenAI released in ${i.date}, with ${i.params} parameters. It only continues text and was never trained to chat.`;
+    const i = alt.info, about = `${i.name} is a language model ${i.by} released in ${i.date}, with ${i.params} parameters. ${i.about}`;
     if (d.kind === 'download') return el('div', { class: 'door' }, el('h2', null, `One download first: ${i.name}`),
       el('p', null, about), el('p', null, `It is a ${i.megabytes.toLocaleString('en-US')} MB download from Hugging Face, with a small program from jsDelivr to run it. Both run in this browser, and nothing you type is sent anywhere.`),
       el('button', { class: 'big', onclick: () => start(true) }, `Get ${i.name}`));
@@ -1514,7 +1526,7 @@ function door() {
       d.pct != null && d.pct < 1 ? el('progress', { value: d.pct, max: 1 }) : el('div', { class: 'status', style: 'justify-content:center' }, el('span', { class: 'spin' }), 'This can take a minute.'));
     if (d.kind === 'error') return el('div', { class: 'door' }, el('h2', null, `${i.name} did not start`), el('p', null, d.why), el('button', { class: 'big', onclick: () => start(true) }, `Try ${i.name} again`));
   }
-  if (ALT_KEY && d.kind === 'error') return el('div', { class: 'door' }, el('h2', null, 'The older model did not start'), el('p', null, d.why));
+  if (ALT_KEY && d.kind === 'error') return el('div', { class: 'door' }, el('h2', null, 'The other model did not start'), el('p', null, d.why));
   if (d.kind === 'none') return el('div', { class: 'door' }, el('h2', null, 'This page needs Chrome’s built-in AI'),
     el('p', null, 'Nano Chat talks only to Gemini Nano, the small model that Chrome runs on your own computer. This browser does not offer it.'),
     el('ul', null, el('li', null, 'Use Chrome 148 or newer on a Windows, Mac or Linux computer, or a Chromebook Plus.'), el('li', null, 'The computer needs about 22 GB of free disk space, and either a graphics card with more than 4 GB of memory or 16 GB of RAM.'), el('li', null, 'Phones and tablets are not supported yet.')),
@@ -1603,11 +1615,16 @@ function showNotes() {
     list, el('button', { class: 'plain', onclick: () => { notes.push({ id: uid(), title: '', body: '', pinned: false }); saveNotes(); draw(); list.lastChild.querySelector('input').focus(); } }, '＋ Add a note'));
 }
 function showSettings() {
+  // Beside each key: keep it in this browser (the usual way), or only for as long as this tab stays open. One switch covers every key.
+  function keepBox() {
+    return el('label', { class: 'radio keyKeep', style: 'margin-top:8px' }, el('input', { type: 'checkbox', checked: !!settings.sessionKeys, onchange: e => { settings.sessionKeys = e.target.checked; saveSettings(); drawKey(); drawCoach(); } }),
+      el('span', null, 'Keep keys only until this tab is closed', el('small', null, settings.sessionKeys ? 'Keys are not saved in this browser. They are forgotten when this tab is closed.' : 'As it is, a key stays in this browser until you delete it. Tick this on a computer you share.')));
+  }
   const keyBox = el('div');
   const drawKey = () => {
     keyBox.textContent = ''; const p = PROVIDERS[settings.provider];
     if (p.keyUrl) keyBox.append(el('label', { for: 'keyIn' }, `Your ${p.label} key`),
-      el('input', { type: 'password', id: 'keyIn', value: settings.keys[settings.provider] || '', placeholder: 'Paste the key here', autocomplete: 'off', oninput: e => { settings.keys[settings.provider] = e.target.value.trim(); saveSettings(); } }),
+      el('input', { type: 'password', id: 'keyIn', value: settings.keys[settings.provider] || '', placeholder: 'Paste the key here', autocomplete: 'off', oninput: e => { settings.keys[settings.provider] = e.target.value.trim(); saveSettings(); } }), keepBox(),
       el('p', { class: 'sub', style: 'margin-top:6px' }, 'The key is stored only in this browser and sent only to that service. You can get one at ', el('a', { href: p.keyUrl, target: '_blank', rel: 'noopener' }, host(p.keyUrl)), '. Without a key, or if the service refuses it, searches use Wikipedia.'));
   };
   const radio = (id, title, sub) => el('label', { class: 'radio' }, el('input', { type: 'radio', name: 'prov', checked: settings.provider === id, onchange: () => { settings.provider = id; saveSettings(); drawKey(); } }), el('span', null, title, el('small', null, sub)));
@@ -1625,7 +1642,7 @@ function showSettings() {
         el('input', { type: 'text', id: 'coachUrl', value: co.url || '', placeholder: 'https://openrouter.ai/api/v1', autocomplete: 'off', oninput: e => { co.url = e.target.value.trim(); saveCoach(); } }),
         el('p', { class: 'sub', style: 'margin-top:6px' }, 'Any service, or a program on this computer, that speaks the OpenAI chat format. For example OpenRouter, or Ollama at http://localhost:11434/v1. It has to accept requests from web pages.')] : null,
       el('label', { for: 'coachKey' }, p.custom ? 'Its key, if it needs one' : `Your ${p.name} key`),
-      el('input', { type: 'password', id: 'coachKey', value: co.keys[co.provider] || '', placeholder: 'Paste the key here', autocomplete: 'off', oninput: e => { co.keys[co.provider] = e.target.value.trim(); saveCoach(); } }),
+      el('input', { type: 'password', id: 'coachKey', value: co.keys[co.provider] || '', placeholder: 'Paste the key here', autocomplete: 'off', oninput: e => { co.keys[co.provider] = e.target.value.trim(); saveCoach(); } }), p.keyless ? null : keepBox(),
       el('p', { class: 'sub', style: 'margin-top:6px' }, p.custom ? 'The key is stored only in this browser and sent only to that address.' : ['The key is stored only in this browser and sent only to that company. You can get one at ', el('a', { href: p.keyUrl, target: '_blank', rel: 'noopener' }, host(p.keyUrl)), '. Each review is charged to your key.']),
       el('label', { for: p.custom ? 'coachModel' : 'coachModelSel' }, 'Model'),
       p.custom ? null : el('select', { id: 'coachModelSel', onchange: e => { if (e.target.value === '*') { co.otherModel = co.provider; } else { co.otherModel = ''; co.models[co.provider] = e.target.value === p.model ? '' : e.target.value; } saveCoach(); drawCoach(); if (e.target.value === '*') $('#coachModel').focus(); } },
@@ -1691,6 +1708,12 @@ function showSettings() {
     el('p', { class: 'sub', id: 'coachLeaves' }, el('strong', null, 'Switching the coach on sends data out of this app. '), 'Each reply it reviews goes to the company you choose, together with your message, the few messages before it, and what the tools found. While the coach is off, none of that is sent.'),
     el('select', { id: 'coachMode', onchange: e => { co.mode = e.target.value; saveCoach(); drawCoach(); } }, [['off', 'Off'], ['ask', 'Only when I ask, with a button under a reply'], ['every', 'After every reply']].map(([v, t]) => el('option', { value: v, selected: co.mode === v }, t))),
     coachBox,
+    el('label', { style: 'margin-top:18px' }, 'What this browser keeps'),
+    el('p', { class: 'sub' }, `Your chats and notes are kept in this browser, where the next person to use it can read them. There ${state.chats.filter(c => c.turns.length).length === 1 ? 'is 1 chat' : `are ${state.chats.filter(c => c.turns.length).length} chats`} and ${notes.length === 1 ? '1 note' : notes.length + ' notes'}. A single chat or note has its own delete button.`),
+    el('div', { class: 'tools', id: 'wipe' },
+      el('button', { class: 'plain', id: 'wipeChats', disabled: state.busy, onclick: async () => { if (await sure('Delete every chat?', 'All the chats in this browser will be removed. Your notes and settings stay. This cannot be undone.', 'Delete all chats')) await deleteAllChats(); } }, 'Delete all chats'),
+      el('button', { class: 'plain', id: 'wipeNotes', onclick: async () => { if (await sure('Delete every note?', 'All the notes in this browser will be removed. This cannot be undone.', 'Delete all notes')) deleteAllNotes(); } }, 'Delete all notes'),
+      el('button', { class: 'plain danger', id: 'wipeAll', disabled: state.busy, onclick: async () => { if (await sure('Delete everything?', 'Every chat and note, your settings, your own instructions and any keys you typed in will be removed from this browser, and the page will start again as on a first visit. This cannot be undone.', 'Delete everything')) deleteEverything(); } }, 'Delete everything, settings and keys too')),
     el('p', { class: 'sub', style: 'margin-top:14px' }, 'Your chats and notes stay in this browser. Search queries, and links you ask it to read, go out. So do the replies the coach reviews, if you switch the coach on.'),
     el('p', { class: 'sub', style: 'margin-top:8px' }, 'Nano Chat is free and open source: ', el('a', { href: 'https://github.com/ToonTalk/nano-chat', target: '_blank', rel: 'noopener' }, 'how it works, and the code'), '. There is a ',
       el('a', { href: 'https://toontalk.github.io/nano-chat/student-guide.html', target: '_blank', rel: 'noopener' }, 'guide for students'), ', a ', el('a', { href: 'https://toontalk.github.io/nano-chat/teacher-guide.html', target: '_blank', rel: 'noopener' }, 'guide for teachers'), ', and an account of ',
@@ -1700,7 +1723,27 @@ function showSettings() {
 // chats
 function newChat() { let c = state.chats.find(x => !x.turns.length); if (!c) { c = { id: uid(), title: 'New chat', created: Date.now(), updated: Date.now(), turns: [], segments: [], compactedUpTo: 0 }; state.chats.push(c); } openChat(c); }
 function openChat(c) { if (state.busy) return; state.chat = c; engine.dirty = true; settings.last = c.id; saveSettings(); document.body.classList.remove('menu'); ui.chats(); ui.thread(); ui.title(); ui.meter(); $('#input').focus(); }
-async function deleteChat(c) { if (state.busy || !confirm(`Delete “${c.title}”? This cannot be undone.`)) return; state.chats = state.chats.filter(x => x !== c); await db.del(c.id); if (state.chat === c) newChat(); else ui.chats(); }
+// Asks before something that cannot be undone. (The browser's own confirm() box does nothing in some frames.)
+function sure(title, text, yes) {
+  return new Promise(res => {
+    const d = $('#dlg'), done = v => { d.removeEventListener('close', no); res(v); if (d.open) d.close(); }, no = () => done(false);
+    dialog(title, el('p', null, text), el('div', { class: 'tools' }, el('button', { class: 'plain danger', id: 'sureYes', onclick: () => done(true) }, yes), el('button', { class: 'plain', id: 'sureNo', onclick: no }, 'No, keep it')));
+    d.addEventListener('close', no);
+  });
+}
+async function deleteChat(c) { if (state.busy || !(await sure('Delete this chat?', `“${c.title}” will be removed from this browser. This cannot be undone.`, 'Delete it'))) return; state.chats = state.chats.filter(x => x !== c); await db.del(c.id); if (state.chat === c) newChat(); else ui.chats(); }
+// Clearing out what this browser keeps, for a computer that someone else will use next.
+async function deleteAllChats() {
+  if (state.busy) return false;
+  for (const c of state.chats) await db.del(c.id).catch(console.warn);
+  state.chats = []; if (engine.main) { try { engine.main.destroy(); } catch {} engine.main = null; } engine.dirty = true; newChat(); return true;
+}
+function deleteAllNotes() { notes = []; saveNotes(); }
+async function deleteEverything() {            // chats, notes, settings and keys: the page starts again as on a first visit
+  if (!(await deleteAllChats())) return;
+  try { for (const k of Object.keys(localStorage)) if (k.startsWith('nanochat.')) localStorage.removeItem(k); sessionStorage.removeItem('nanochat.keys'); } catch {}
+  location.reload();
+}
 
 // composer
 const input = $('#input');
@@ -1850,7 +1893,7 @@ async function start(byClick) {
   if (last) { state.chat = last; ui.chats(); ui.thread(); ui.title(); } else newChat();
   start(false);
 })();
-window.NC = { state, engine, settings, B, get alt() { return alt; }, start, TOLD, told, setTold, toldEdited, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
+window.NC = { state, engine, settings, B, get alt() { return alt; }, start, TOLD, told, setTold, toldEdited, sure, deleteChat, deleteAllChats, deleteAllNotes, deleteEverything, db, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
   FEATURES, setPart, setParts, defaultParts, partsLabel, partsDiff, rerun, viewFrom, nudgeFor, startCoach, coachSay, askCoach, askAI, aiSearch, coachPrompt, parseLoose, showParts, showRerun, showSettings, newChat, keepAnswer, coachTries, saveChat, cleanSvg, speak, speakable, stopSpeaking, micToggle, tts, mic };
 </script>
 </body>

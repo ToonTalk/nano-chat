@@ -64,7 +64,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <p>The dates are from <a href="https://developers.openai.com/api/docs/deprecations">OpenAI’s</a> and <a href="https://platform.claude.com/docs/en/about-claude/model-deprecations">Anthropic’s</a> lists of retired models. So there were two ways forward: run GPT-2, and use answers that GPT-3.5 gave while it was still running.</p>
 
 <h2>Experiment 1: Nano Chat on GPT-2</h2>
-<p>Nano Chat reaches Gemini Nano through a handful of calls: make a session, send it a message, copy it, add to it. A new file, <code>gpt2.js</code>, gives GPT-2 the same face. Opening the page with <code>?model=gpt2</code> loads it, and the rest of the page, every part included, runs unchanged on a model from 2019.</p>
+<p>Nano Chat reaches Gemini Nano through a handful of calls: make a session, send it a message, copy it, add to it. A new file, <code>open-models.js</code>, gives GPT-2 the same face. Opening the page with <code>?model=gpt2</code> loads it, and the rest of the page, every part included, runs unchanged on a model from 2019.</p>
 <p>One thing had to be added. GPT-2 was never trained to hold a conversation. It only continues text. So the stand-in lays each conversation out as a script, with lines starting “User:” and “Assistant:”, lets GPT-2 write on from “Assistant:”, and stops it when it begins a line for the user. Gemini Nano needs nothing like this, because conversation was part of its training.</p>
 <h3>What was measured</h3>
 <div class="scroll"><table>

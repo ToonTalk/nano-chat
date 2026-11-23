@@ -85,7 +85,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
   <li><b>Results vary.</b> Chrome does not let a page fix the model's randomness. A probe that fails for most students may succeed for one. Treat that as data, and use "Run 3 times".</li>
   <li><b>Bare Nano is better than you might expect at some things.</b> In testing it multiplied two four-digit numbers correctly by working step by step. It reliably got percentages and powers wrong, which is why the suggested sum is a percentage.</li>
   <li><b>The complete chatbot is still a small model.</b> With every part on it can misread a search result or round a calculator's answer. That is worth discussing, not hiding.</li>
-  <li><b>English only.</b> The page asks Chrome for English input and output.</li>
+  <li><b>Built for English, though Nano knows other languages.</b> The page, its instructions to Nano and its tools are in English, and web search uses the English Wikipedia. Nano itself reads and writes other languages: in our test it answered correctly in French, Swedish and Japanese, and gave the wrong capital of Wales in Welsh. Chrome lists English, Spanish, Japanese, French and German as the languages it supports. Ask Nano which languages it knows and it will claim "hundreds" and say it is always learning. Neither claim can be trusted, which makes it a good probe.</li>
   <li><b>Chrome may change.</b> The model and its rules belong to Chrome and are updated by Google. In November 2026 the installed model called itself "Gemma" when given no instructions.</li>
 </ul>
 
@@ -94,7 +94,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
   <li>The model runs on the student's computer. Chats and notes are stored in that browser only. There are no accounts.</li>
   <li>A web search sends the search words to Wikipedia. Reading a link fetches that page, through the <code>r.jina.ai</code> reader service when the site blocks direct reading; that can be switched off in Settings.</li>
   <li>Voice input is off by default. When switched on, the page asks Chrome to recognize speech on the computer itself. Chrome's online recognition, which sends audio to Google, is a separate switch.</li>
-  <li>On a shared computer, the next student can see earlier chats and notes. Use the delete buttons, or separate browser profiles.</li>
+  <li>On a shared computer, the next student can see earlier chats and notes. Each chat and note has a delete button, and Settings, under "What this browser keeps", can delete all chats, all notes, or everything including settings and keys. Separate browser profiles also keep students apart.</li>
 </ul>
 
 <h2>The optional coach</h2>
@@ -103,7 +103,8 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <ul>
   <li><b>Cost:</b> each review is charged to the key. In our test with Claude Sonnet 5.5 in November 2026, a review used about 1,700 tokens in and 750 out, around one US cent. A review that used web search read 25,000 to 37,000 tokens, several cents.</li>
   <li><b>Privacy:</b> each reviewed reply goes to that company, with the student's message, the few messages before it, and what the tools found. Decide whether that suits your setting before giving students a key.</li>
-  <li><b>Keys:</b> a key typed into Settings is stored in that browser. Do not leave a personal key on shared machines.</li>
+  <li><b>A coach with no key and no bill:</b> there is a <a href="https://share.gemini.google/Lqj9AF1z9QPK">copy of Nano Chat for Gemini Canvas</a> whose coach is Gemini, used through each student's own Google account, so nobody needs a key. Each student has to be signed in to Google with an account that is allowed to use Gemini, and the reviewed replies go to Google. Google does not document this way of working, so it may stop, and the shared copy is a snapshot that can be older than the app here. Try it on a student account before relying on it.</li>
+  <li><b>Keys:</b> a key typed into Settings is stored in that browser unless you tick "Keep keys only until this tab is closed" beside it. Tick it on a shared machine, or do not leave a personal key there.</li>
   <li><b>It can be wrong.</b> Without its web search switched on, it knows nothing recent.</li>
 </ul>
 <p>The lesson works without the coach. The side-by-side comparison does most of the teaching.</p>

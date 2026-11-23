@@ -39,7 +39,7 @@ try {
     await b.screenshot(path.join(shots, `gpt2-${key}-${name}.png`));
   }
   out.stats = await b.eval('JSON.stringify(NC.alt.stats)').then(JSON.parse);
-  console.log('\nstats', JSON.stringify(out.stats), `→ ${(out.stats.tokens / out.stats.ms * 1000).toFixed(1)} tokens/s overall`);
+  console.log('\nstats', JSON.stringify(out.stats), await b.eval("JSON.stringify(NC.alt.rates())"));
   out.warnings = b.log.filter(l => /^\[(warning|error)\]/.test(l)).slice(0, 40); out.errors = b.errors;
   console.log('\nconsole warnings/errors:', out.warnings.length, 'exceptions:', b.errors.length); out.warnings.slice(0, 8).forEach(l => console.log('  ' + l.slice(0, 200)));
 } catch (e) { console.error('FAILED', e.message); console.log(b.log.slice(-15).join('\n')); console.log(b.errors.join('\n')); process.exitCode = 1; }
