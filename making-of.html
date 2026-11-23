@@ -92,7 +92,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 
 <h2>What could not be done</h2>
 <ul>
-  <li><b>A version inside a Claude artifact.</b> Ken asked whether one could use Gemini Nano. A probe published as an artifact showed that Chrome exposes the model's interface there but the frame's permissions switch it off, so the answer is no. Gemini Canvas turned out to have the same wall, and a way round it, described below.</li>
+  <li><b>A version inside a Claude artifact.</b> Ken asked whether one could use Gemini Nano. A probe published as an artifact showed that Chrome exposes the model's interface there but the frame's permissions switch it off, so the answer was no. Gemini Canvas turned out to have the same wall, and a way round it, described below. A day later the same way round was tried in an artifact, with a different answer: <a href="#artifact-tab">see below</a>.</li>
   <li><b>Running on most school laptops.</b> Chrome requires a graphics card with more than 4 GB of memory, or 16 GB of RAM. Ken asked whether almost all new laptops qualify. They do not: laptops with 8 GB were returning in 2026 because of memory prices.</li>
 </ul>
 
@@ -111,7 +111,19 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <img src="screenshots/canvas.jpg" alt="Nano Chat in a tab opened from Gemini Canvas: Nano's wrong percentage, and the coach's review of it made with no key.">
 <p>Ken then agreed to a public link to the Canvas, and tried it himself in an incognito window. The coach failed with a message that it was "outside Gemini Canvas". It was not outside. Google gives the same refusal to a page that is not in Canvas and to a visitor who is not signed in to Google, and Claude's message had assumed the first. The message now says which it is, and what to do.</p>
 <p>Two smaller mistakes came out along the way. One line of the new code read "the coach is ready if it needs no key, or..." where the "or" bound more tightly than intended, so the coach's button never appeared; the first automated check caught it. And Claude's first plan for the new tab, opening it from a stored copy of the page, was dropped before it was tried: as Claude reads Chrome's rules, such a tab is cut off from the page that opened it, and the coach's requests depend on that connection. The page is written into an empty tab instead.</p>
-<p>None of this is documented by Google, and it may stop working. The public link is a snapshot, so it does not follow later changes to the app.</p>
+<p>None of this is documented by Google, and it may stop working. The public link is a snapshot, so it does not follow later changes to the app. On November 23 the Canvas was given the current app, with pictures and sound, and shared again under a new link. Opened from that link, Nano read the writing in a picture in the tab, and the coach reviewed a wrong sum with no key.</p>
+
+<h3 id="artifact-tab">The same trick in a Claude artifact</h3>
+<p>Ken then asked whether the trick of the two halves would work in an artifact. Claude published a small private probe artifact that runs each step and reports what happened, and ran it in Ken's Chrome:</p>
+<div class="scroll"><table>
+<tr><th>Check</th><th>In the artifact's frame</th><th>In the tab it opens</th></tr>
+<tr><td>Gemini Nano</td><td>Not allowed, as before</td><td>Allowed. It answered in 14 seconds, and Chrome offered it pictures and sound.</td></tr>
+<tr><td>Claude, on the viewer's own account</td><td>Offered to the page</td><td>Answered, once the request was made by the artifact page on the tab's behalf and Ken had allowed the artifact to use Claude</td></tr>
+<tr><td>Saving settings and chats</td><td>Not checked</td><td>Both work</td></tr>
+<tr><td>Wikipedia, and reading links</td><td>Blocked</td><td>Blocked: the tab inherits the artifact's rules</td></tr>
+</table></div>
+<p>So for Ken it would work, with Claude as the coach at no cost beyond his own plan's limits, but with no web search and no reading of links. Two things went wrong on the way. The tab's first request to Claude was refused because its settings had been made in the tab's own window; the artifact page now makes the request for it. And the very first request waited on the permission question and gave up before Ken had answered it, so a real version would have to ask for that permission before the first review.</p>
+<p>What decides it is who can open such a tab. Claude's rules for artifacts say that a new tab opens only for some signed-in viewers in the artifact owner's own organization; for everyone else the page gets nothing. That limit was read in the rules, not tried with another account. If it holds, an artifact version would run for its owner and some colleagues, and not for a class. No artifact version of Nano Chat has been built.</p>
 
 <h2 id="other-models">An idea that was dropped: other models in Nano's place</h2>
 <p>Gemini Nano needs a fairly strong desktop computer. On November 23 Ken asked whether people without one could be given something else:</p>
@@ -151,6 +163,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <h2>Still unverified</h2>
 <ul>
   <li>The Gemini Canvas copy from a Google account other than Ken's. Signed out, the coach is refused.</li>
+  <li>The artifact probe from any account other than Ken's, as the owner.</li>
   <li>The coach with a real Gemini or ChatGPT key, or with a typed "Other" service. Only Claude was run for real.</li>
   <li>Voice with a real microphone and loudspeaker. The test Chrome has neither, so stand-ins were used.</li>
   <li>Tavily and Serper searches with real keys.</li>

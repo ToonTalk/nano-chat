@@ -239,9 +239,11 @@ own, where Nano is allowed, and sends the coach's requests back through the Canv
 Tried on 22 November 2026 in Chrome 157: Nano answered in that tab, and the coach's review
 came back with no key.
 
-**Try the shared copy:** https://share.gemini.google/Lqj9AF1z9QPK and choose "Open Nano
+**Try the shared copy:** https://share.gemini.google/wTK0xlFycRWj and choose "Open Nano
 Chat in its own tab". Keep the Gemini tab open, because the coach's requests go through it.
-The link is a snapshot made on 22 November 2026, so it can be older than the app. The coach
+The link is a snapshot made on 23 November 2026, with pictures and sound, so it can be older
+than the app. Opened from it in Chrome 157, Nano read the writing in a picture, and the coach
+reviewed an answer with no key. The coach
 there needs the browser to be signed in to Google: in an incognito window Gemini refuses its
 requests. It has not been tried from a second Google account.
 
@@ -249,6 +251,12 @@ To make your own: ask Gemini for any small HTML page in a Canvas, switch the Can
 replace the code with the file's contents, switch back to Preview, and choose "Open Nano
 Chat in its own tab". The 🧪 Frame check button reports what the frame allows. None of this
 is documented by Google, and it may stop working.
+
+The same trick was tried in a Claude artifact with a small probe: Nano ran in the tab it
+opened, and Claude answered there on the owner's account. Web search and reading links are
+blocked there, and Claude's rules say such a tab opens only for some viewers in the owner's
+own organization, so no artifact version has been built. [How it was
+made](https://toontalk.github.io/nano-chat/making-of.html#artifact-tab) has the details.
 
 ## License
 
