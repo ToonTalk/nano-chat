@@ -139,7 +139,7 @@ details.svgcode { margin: .2em 0 .7em; } details.svgcode summary { cursor: point
 .tool { background: none; border: 1px solid transparent; border-radius: 999px; padding: 2px 10px; font-size: 13px; color: var(--muted); }
 .tool:hover { border-color: var(--line); color: var(--ink); background: var(--panel); }
 .plain.sm { padding: 3px 12px; font-size: 13.5px; border-radius: 999px; }
-.offs { font-size: 12.5px; color: var(--muted); margin-top: 6px; } .offs .try { font-size: inherit; }
+.offs { font-size: 12.5px; color: var(--muted); margin-top: 6px; } .offs.goes { color: var(--warn); font-size: 13.5px; } .tool.carry { color: var(--accent); font-weight: 600; } .offs .try { font-size: inherit; }
 .toldMore { margin-top: 8px; } .toldMore summary { cursor: pointer; color: var(--muted); font-size: 14px; } .toldMore pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; background: var(--code); border-radius: 10px; padding: 10px; margin: 6px 0 0; }
 .toldState { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; font-size: 13.5px; color: var(--muted); }
 .nudge { margin-top: 10px; background: var(--accent-soft); border-radius: 12px; padding: 8px 12px; font-size: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -1104,6 +1104,12 @@ async function runTurn(chat, user, bot, idx, signal, ctx) {
   if (F.markdown && F.nudges && user.text && (/\b(draw|sketch|svg)\b/i.test(user.text) || (MAKES.test(user.text) && /\b(picture|drawing|image|logo|icon|illustration|diagram)\b/i.test(user.text)))) prompt += '\n\n(Write the picture as SVG code in a code block. The app will show it as a picture.)';
   if (ev) prompt = `The app looked this up for the message below:\n<<<\n${clip(ev, B.evidence * CH * 1.4)}\n>>>\n\nReply to the user's message below using the information above. Answer directly, in your own voice, without mentioning the app or using phrases like "based on the information".${bot.sources.length ? ' Put the number of the source you used after each fact, like [1].' : ''} If the information does not help with the message, answer from what you know and mention that you could not check it.\n\nUser's message: ${prompt}`;
   bot.phase = 'Getting ready…'; ui.bot(bot.id);
+  // A later question about a picture or recording from earlier in the chat: Nano still has it, and is told so, since an
+  // earlier answer in the same chat may have said otherwise.
+  if (mediaSeen(F) && !hasMedia(user) && ABOUT_MEDIA.test(user.text || '')) {
+    const held = chat.turns.slice(Math.min(viewFrom(chat), idx), idx).flatMap(t => t.media || []);
+    if (held.length) prompt = `[Earlier in this conversation the user attached ${[...new Set(held.map(m => m.kind === 'image' ? 'a picture, which you can see' : 'a sound recording, which you can hear'))].join(' and ')}.]\n` + prompt;
+  }
   const main = await ctx.base(prompt);
   // With a picture or a recording, the message is the words and the files together.
   const input = seen ? [{ role: 'user', content: [{ type: 'text', value: mediaCue(user) + prompt }, ...user.media.map(m => ({ type: m.kind, value: blobOf(m) }))] }] : prompt;
@@ -1384,6 +1390,7 @@ const ui = {
   atts() {
     const row = $('#attRow'); row.textContent = '';
     state.atts.forEach((a, i) => row.append(el('span', { class: 'att' }, `📎 ${a.name} · ${a.text.length.toLocaleString('en-US')} characters`, el('button', { title: 'Remove', onclick: () => { state.atts.splice(i, 1); ui.atts(); ui.busy(); } }, '✕'))));
+    if (state.media.length && !mediaSeen(settings.features)) row.append(el('div', { class: 'offs', id: 'mediaOff' }, '“Pictures and sound” is switched off, so Nano will be told only that this was attached. ', el('button', { class: 'try', onclick: () => { setPart('media', true); ui.atts(); } }, 'Switch it on')));
     state.media.forEach((m, i) => row.append(el('span', { class: 'att' }, m.kind === 'image' ? el('img', { class: 'thumb', src: m.data, alt: '' }) : '🔊', m.kind === 'image' ? m.name : `${m.name} · ${Math.round(m.secs)} seconds`, el('button', { title: 'Remove', onclick: () => { state.media.splice(i, 1); ui.atts(); ui.busy(); } }, '✕'))));
   },
   thread() {
@@ -1541,7 +1548,7 @@ function nudgeFor(chat, i) {
   if (!f.date && /\b(today|tonight|date|what day|which day|what year|this year|what month)\b/i.test(text)) c.push('date');
   if (!f.links && /https?:\/\//.test(text)) c.push('links');
   if (!f.documents && (user.atts || []).length) c.push('documents');
-  if (!f.media && hasMedia(user) && engine.media) c.push('media');
+  if (!f.media && engine.media && (hasMedia(user) || (ABOUT_MEDIA.test(text) && chat.turns.slice(viewFrom(chat), i).some(hasMedia)))) c.push('media');
   if (!f.notes && (REMEMBER.test(text) || (/\b(my|our|mine)\b/i.test(text) && noteMatch(text)))) c.push('notes');
   if (!f.instructions && /\b(who|what) are you\b|your name|where are you running|which model/i.test(text)) c.push('instructions');
   if (!f.search && hints.includes('web_search')) c.push('search');
@@ -1627,8 +1634,12 @@ function botNode(t, i) {
         el('div', { class: 'cap' }, el('b', null, `Try ${k + 2}`), el('span', null, partsDiff(f, v.f)), v.ms != null ? el('button', { title: 'Remove this try', onclick: () => { t.variants = t.variants.filter(x => x !== v); ui.bot(t.id); db.put(chat).catch(console.warn); } }, '✕') : null),
         replyParts(v), verdictOn(v),
         v.ms != null ? el('div', { class: 'tools' },
+          v.text && FEATURES.some(p => !!v.f[p.k] !== !!settings.features[p.k]) ? el('button', { class: 'tool carry', title: 'Makes this the answer Nano remembers, and switches the parts to the ones this try used, for the rest of the chat.', onclick: () => { const parts = { ...v.f }; keepAnswer(t, v); setParts(parts); } }, 'Carry on from this answer, with these parts') : null,
           v.text ? el('button', { class: 'tool', title: 'Nano remembers only one answer to each message. This makes it this one, and the first answer becomes the try.', onclick: () => keepAnswer(t, v) }, 'Continue the chat from this answer') : null,
           FEATURES.some(p => !!v.f[p.k] !== !!settings.features[p.k]) ? el('button', { class: 'tool', onclick: () => setParts(v.f) }, 'Use these parts from now on') : null) : null))));
+    // A try changes nothing else. Say so where it matters: on the latest reply, when a try used a part that is not switched on now.
+    if (done && i === chat.turns.length - 1 && t.variants.some(v => v.ms != null && v.text && FEATURES.some(p => v.f[p.k] && !settings.features[p.k])))
+      kids.push(el('div', { class: 'offs goes' }, `A try does not change the chat. Your next message will follow the first answer, with the parts as they are now (${partsLabel(settings.features)}). To go on from a try, use the button under it.`));
   } else {
     kids.push(replyParts(t));
     if (done && partsOn(f) < CORE.length) kids.push(el('div', { class: 'offs' }, 'For this reply: ' + partsLabel(f) + '.'));

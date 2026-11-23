@@ -84,6 +84,27 @@ try {
   await b.eval(`(async () => { const t = NC.state.chat.turns.at(-1); await NC.rerun(t.id, { ...t.f, media: true }); })()`);
   const again = await b.eval(`NC.state.chat.turns.at(-1).variants[0].text`);
   check('and that try reads the picture', /4821/.test(again), again);
+  // a try changes nothing else: the page says so, and offers to carry on from the try
+  const goes = await b.eval(`(document.querySelector('.msg.bot:last-child .goes') || {}).textContent || ''`);
+  check('the page says that a try does not change the chat', /A try does not change the chat/.test(goes) && /Pictures and sound/.test(goes), goes);
+  await b.eval(`document.querySelector('.msg.bot:last-child .carry').click()`);
+  check('“Carry on from this answer, with these parts” makes the try the answer and switches the part on', await b.eval(`NC.settings.features.media === true && /4821/.test(NC.state.chat.turns.at(-1).text) && !document.querySelector('.msg.bot:last-child .goes')`));
+  r = await ask('What color is the circle in the picture?');
+  check('and the next question is answered from the picture', /red/i.test(r.text), r.text);
+  // a later question about a picture Nano was never given
+  await b.eval(`NC.setPart('media', false); NC.newChat()`);
+  await ask('What is written in this picture? Answer with the words only.', '[PIC]');
+  r = await ask('What color is the circle in the picture?');
+  const later = await b.eval(`(document.querySelector('.msg.bot:last-child .nudge') || {}).textContent || ''`);
+  check('a follow-up about a picture Nano was not given points at the part too', /Pictures and sound/.test(later), later || r.text);
+  await b.eval(`(async () => { const t = NC.state.chat.turns.at(-1); await NC.rerun(t.id, { ...t.f, media: true }); })()`);
+  check('and a try with the part on answers it, though an earlier answer said it could not see', /red/i.test(await b.eval(`NC.state.chat.turns.at(-1).variants[0].text`)), await b.eval(`NC.state.chat.turns.at(-1).variants[0].text`));
+  // at the paperclip, with the part off
+  await b.eval(`NC.newChat(); NC.state.media = [PIC]; NC.ui.atts()`);
+  check('attaching a picture with the part off says what Nano will get', /switched off, so Nano will be told only that this was attached/.test(await b.eval(`(document.querySelector('#mediaOff') || {}).textContent || ''`)));
+  await b.eval(`document.querySelector('#mediaOff button').click()`);
+  check('and “Switch it on” does', await b.eval(`NC.settings.features.media === true && !document.querySelector('#mediaOff') && NC.state.media.length === 1`));
+  await b.eval(`NC.state.media = []; NC.ui.atts()`);
   await b.eval(`NC.setPart('media', true)`);
 
   // the paperclip
