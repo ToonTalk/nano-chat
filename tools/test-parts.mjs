@@ -37,7 +37,7 @@ try {
     check('and leaves the address clean', !(await b.eval('location.search')).includes('start'), await b.eval('location.href'));
     check('bare Nano is told nothing', (await b.eval(`NC.systemPrompt(NC.state.chat)`)) === '');
     check('the welcome page says so and offers things to try', await b.eval(`/bare Gemini Nano/.test(document.querySelector('.welcome').textContent) && document.querySelectorAll('.tries button').length === 4`), await b.eval(`document.querySelector('.welcome').textContent`));
-    check('the header shows 0 of 13', (await b.eval(`document.querySelector('#partsCount').textContent`)) === '0/13');
+    check('the header shows 0 of 14', (await b.eval(`document.querySelector('#partsCount').textContent`)) === '0/14');
     await b.screenshot(path.join(shots, 'bare.png'));
 
     r = await ask('Who are you, and where are you running?');
@@ -96,7 +96,7 @@ try {
     // ── everything on, then take parts away ──
     await b.eval(`NC.setParts(NC.defaultParts(true))`);
     await fresh();
-    check('everything on: the header shows 13 of 13', (await b.eval(`document.querySelector('#partsCount').textContent`)) === '13/13');
+    check('everything on: the header shows 14 of 14', (await b.eval(`document.querySelector('#partsCount').textContent`)) === '14/14');
     r = await ask('What is an 18% tip on a $64.50 bill?');
     check('everything on: the calculator is used', used(r, 'calculator') && /11\.61/.test(r.text), r.text);
     check('nothing to point at when all parts are on', (await nudge()) === '');
@@ -150,14 +150,14 @@ try {
     // ── the switch panel ──
     await fresh();
     await b.eval(`NC.showParts()`);
-    check('the panel lists every part with a switch', (await b.eval(`document.querySelectorAll('#dlg .part input').length`)) === 15, await b.eval(`document.querySelectorAll('#dlg .part input').length`));
+    check('the panel lists every part with a switch', (await b.eval(`document.querySelectorAll('#dlg .part input').length`)) === 16, await b.eval(`document.querySelectorAll('#dlg .part input').length`));
     await b.screenshot(path.join(shots, 'parts.png'), { h: 1400 });
     await b.eval(`document.querySelector('#dlg .part input').click()`);
-    check('a switch in the panel takes effect at once', await b.eval(`NC.settings.features.instructions === false && document.querySelector('#partsCount').textContent === '12/13' && /under construction/.test(document.querySelector('.welcome').textContent)`));
+    check('a switch in the panel takes effect at once', await b.eval(`NC.settings.features.instructions === false && document.querySelector('#partsCount').textContent === '13/14' && /under construction/.test(document.querySelector('.welcome').textContent)`));
     await b.eval(`document.querySelector('#dlg').close(); NC.setParts(NC.defaultParts(true))`);
     await b.goto('/index.html');
     await b.waitFor('window.NC && NC.engine.ready', { timeout: 180000 });
-    check('switches survive a reload', (await b.eval(`document.querySelector('#partsCount').textContent`)) === '13/13' && await b.eval(`NC.state.chats.some(c => c.turns.some(t => (t.variants || []).length))`));
+    check('switches survive a reload', (await b.eval(`document.querySelector('#partsCount').textContent`)) === '14/14' && await b.eval(`NC.state.chats.some(c => c.turns.some(t => (t.variants || []).length))`));
   }
 
   // ── the coach ──

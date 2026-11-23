@@ -16,7 +16,7 @@ try {
 
   // the parts panel
   await b.eval(`NC.showParts()`);
-  check('every part offers “More about this”', (await b.eval(`document.querySelectorAll('#dlg .part .moreBtn').length`)) === 14);
+  check('every part offers “More about this”', (await b.eval(`document.querySelectorAll('#dlg .part .moreBtn').length`)) === 15);
   check('closed, a part shows one short line', (await b.eval(`${partRow('Looking back')}.querySelectorAll('small').length`)) === 1 && /finds those old messages and shows them to Nano again/.test(await b.eval(`${partRow('Looking back')}.innerText`)));
   await b.eval(`${partRow('Looking back')}.querySelector('.moreBtn').click()`);
   let t = await b.eval(`${partRow('Looking back')}.innerText`);
@@ -30,7 +30,7 @@ try {
   check('switching the part keeps its explanation open', (await b.eval(`NC.settings.features.recall`)) === false && /name of your hotel/.test(t) && /^Looking back\s*Once old messages no longer fit/.test(t.replace(/\n+/g, ' ')), t);
   await b.eval(`${partRow('Looking back')}.querySelector('input').click(); ${partRow('Looking back')}.querySelector('.moreBtn').click()`);
   check('“Less” closes it', !/name of your hotel/.test(await dlg()));
-  check('every part has a longer explanation of some length', await b.eval(`(() => { const rows = [...document.querySelectorAll('#dlg .part')].filter(r => r.querySelector('.moreBtn')); rows.forEach(r => { if (!r.querySelector('.moreTxt')) r.querySelector('.moreBtn').click(); }); return [...document.querySelectorAll('#dlg .part .moreTxt')].every(m => m.textContent.length > 200) && document.querySelectorAll('#dlg .part .moreTxt').length === 14; })()`));
+  check('every part has a longer explanation of some length', await b.eval(`(() => { const rows = [...document.querySelectorAll('#dlg .part')].filter(r => r.querySelector('.moreBtn')); rows.forEach(r => { if (!r.querySelector('.moreTxt')) r.querySelector('.moreBtn').click(); }); return [...document.querySelectorAll('#dlg .part .moreTxt')].every(m => m.textContent.length > 200) && document.querySelectorAll('#dlg .part .moreTxt').length === 15; })()`));
 
   // Settings
   await b.eval(`NC.showSettings()`);

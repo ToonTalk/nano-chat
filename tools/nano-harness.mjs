@@ -36,7 +36,7 @@ function serve(root, port) {
   return new Promise(res => server.listen(port, '127.0.0.1', () => res(server)));
 }
 
-export async function launch({ root, width = 1180, height = 820, withModel = true } = {}) {
+export async function launch({ root, width = 1180, height = 820, withModel = true, flags = [] } = {}) {      // flags: extra Chrome switches, such as a stand-in camera
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'nano-chat-'));
   if (withModel) {
     const src = path.join(USER_DATA, 'OptGuideOnDeviceModel');
@@ -53,7 +53,7 @@ export async function launch({ root, width = 1180, height = 820, withModel = tru
   const chrome = spawn(CHROME, [
     '--headless=new', `--remote-debugging-port=${dbgPort}`, `--user-data-dir=${profile}`,
     '--enable-features=OptimizationGuideOnDeviceModel:BypassPerfRequirement/true,PromptAPIForGeminiNano',
-    `--window-size=${width},${height}`, '--no-first-run', '--no-default-browser-check', 'about:blank',
+    `--window-size=${width},${height}`, '--no-first-run', '--no-default-browser-check', ...flags, 'about:blank',
   ], { stdio: 'ignore' });
 
   let target;

@@ -14,7 +14,8 @@ Keep answers clear and fairly short. You may use Markdown.
 You are a small model, so be honest: when you are not sure, say so instead of guessing, and never make up sources, links or quotations.
 You are unreliable at arithmetic. State a calculated number only when it has been given to you; otherwise say what would need working out.
 For reference, today's date is DATE.
-Sometimes a message arrives together with facts the app has looked up for you (a calculation, search results, a note, part of a document). Trust those over your own memory and copy numbers from them exactly. You cannot look anything up yourself, so never write out calculator output or search results of your own.`;
+Sometimes a message arrives together with facts the app has looked up for you (a calculation, search results, a note, part of a document). Trust those over your own memory and copy numbers from them exactly. You cannot look anything up yourself, so never write out calculator output or search results of your own.
+The user can attach pictures and sound recordings, and they are given to you with the message. You can see those pictures and hear those recordings. When asked what you see or hear, say what is in them, and never say that you cannot see or hear.`;      // the last line is there on computers where Chrome lets Nano take pictures and sound
 const PIRATE = 'You are a pirate called Captain Byte. Answer in one short sentence and always end with the word Arr!';
 const type = (id, text) => b.eval(`(() => { const t = document.querySelector('#${id}'); t.value = ${JSON.stringify(text)}; t.dispatchEvent(new Event('input', { bubbles: true })); return 1; })()`);
 const sys = () => b.eval(`NC.systemPrompt(NC.state.chat)`);
@@ -28,7 +29,7 @@ try {
   await b.eval(`NC.showSettings()`);
   check('Settings shows the briefing in a box', (await b.eval(`document.querySelector('#toldBriefing').value`)) === WAS.split('\n').slice(0, 3).join('\n'));
   check('and says the words are the page’s', /These are the page’s own words/.test(await b.eval(`document.querySelector('.toldState').textContent`)) && !(await b.eval(`!!document.querySelector('#toldReset')`)));
-  check('the other parts’ lines are there to open', (await b.eval(`['toldCalculator', 'toldDate', 'toldTools'].every(id => document.querySelector('#' + id).value.length > 20)`)) && /\{date\}/.test(await b.eval(`document.querySelector('#toldDate').value`)));
+  check('the other parts’ lines are there to open', (await b.eval(`['toldCalculator', 'toldDate', 'toldTools', 'toldMedia'].every(id => document.querySelector('#' + id).value.length > 20)`)) && /\{date\}/.test(await b.eval(`document.querySelector('#toldDate').value`)));
   await b.screenshot(path.join(shots, 'told-settings.png'));
 
   await type('toldBriefing', PIRATE);

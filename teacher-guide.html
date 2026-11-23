@@ -59,7 +59,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <tr><td>Send students <a href="./?start=bare">the link that starts with every part off</a>. The welcome screen suggests things to try that bare Nano cannot do. After a weak answer the page offers to try again with the missing part, and shows both answers.</td><td>Start from <a href="./?start=full">everything on</a>. Students switch one part off, predict what will break, and test the prediction.</td></tr>
 <tr><td>Best for a first meeting with the idea. Each part arrives as the answer to a failure the student has just seen.</td><td>Best once students have the picture, and for more open investigation.</td></tr>
 </table></div>
-<p>The <a href="student-guide.html">student guide</a> walks through seven experiments the first way, then turns to the second.</p>
+<p>The <a href="student-guide.html">student guide</a> walks through eight experiments the first way, then turns to the second.</p>
 
 <h2>A lesson outline (about 50 minutes)</h2>
 <ol>
@@ -86,6 +86,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
   <li><b>Bare Nano is better than you might expect at some things.</b> In testing it multiplied two four-digit numbers correctly by working step by step. It reliably got percentages and powers wrong, which is why the suggested sum is a percentage.</li>
   <li><b>The complete chatbot is still a small model.</b> With every part on it can misread a search result or round a calculator's answer. That is worth discussing, not hiding.</li>
   <li><b>Built for English, though Nano knows other languages.</b> The page, its instructions to Nano and its tools are in English, and web search uses the English Wikipedia. Nano itself reads and writes other languages: in our test it answered correctly in French, Swedish and Japanese, and gave the wrong capital of Wales in Welsh. Chrome lists English, Spanish, Japanese, French and German as the languages it supports. Ask Nano which languages it knows and it will claim "hundreds" and say it is always learning. Neither claim can be trusted, which makes it a good probe.</li>
+  <li><b>Pictures and sound are not on every computer.</b> On some, Chrome gives Nano text only, and then the paperclip offers files alone. Where they work, Nano read printed words in a picture and wrote down a clear recording correctly in testing. It has not been tried on photographs of handwriting, or on noisy rooms.</li>
   <li><b>Chrome may change.</b> The model and its rules belong to Chrome and are updated by Google. In November 2026 the installed model called itself "Gemma" when given no instructions.</li>
 </ul>
 
@@ -94,6 +95,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
   <li>The model runs on the student's computer. Chats and notes are stored in that browser only. There are no accounts.</li>
   <li>A web search sends the search words to Wikipedia. Reading a link fetches that page, through the <code>r.jina.ai</code> reader service when the site blocks direct reading; that can be switched off in Settings.</li>
   <li>Voice input is off by default. When switched on, the page asks Chrome to recognize speech on the computer itself. Chrome's online recognition, which sends audio to Google, is a separate switch.</li>
+  <li>Pictures, photos and recordings are kept in the browser with their chat and are given only to Nano, on the same computer. The camera and microphone are used only when a student chooses “Take a photo” or “Record sound”, and the browser asks permission first. Remind students not to photograph or record other people without asking.</li>
   <li>On a shared computer, the next student can see earlier chats and notes. Each chat and note has a delete button, and Settings, under "What this browser keeps", can delete all chats, all notes, or everything including settings and keys. Separate browser profiles also keep students apart.</li>
 </ul>
 
@@ -102,6 +104,7 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <img src="screenshots/coach.png" alt="The coach comparing two answers to the same question, with a comment in each answer's card.">
 <ul>
   <li><b>Cost:</b> each review is charged to the key. In our test with Claude Sonnet 5.5 in November 2026, a review used about 1,700 tokens in and 750 out, around one US cent. A review that used web search read 25,000 to 37,000 tokens, several cents.</li>
+  <li><b>Pictures and recordings:</b> the coach is given Nano's own description of them. A picture itself goes to the coach's company only if “Let the coach see pictures I attach” is ticked in Settings. Recordings are never sent.</li>
   <li><b>Privacy:</b> each reviewed reply goes to that company, with the student's message, the few messages before it, and what the tools found. Decide whether that suits your setting before giving students a key.</li>
   <li><b>A coach with no key and no bill:</b> there is a <a href="https://share.gemini.google/Lqj9AF1z9QPK">copy of Nano Chat for Gemini Canvas</a> whose coach is Gemini, used through each student's own Google account, so nobody needs a key. Each student has to be signed in to Google with an account that is allowed to use Gemini, and the reviewed replies go to Google. Google does not document this way of working, so it may stop, and the shared copy is a snapshot that can be older than the app here. Try it on a student account before relying on it.</li>
   <li><b>Keys:</b> a key typed into Settings is stored in that browser unless you tick "Keep keys only until this tab is closed" beside it. Tick it on a shared machine, or do not leave a personal key there.</li>

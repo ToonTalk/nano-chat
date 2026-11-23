@@ -5,7 +5,7 @@ No account, no API key, and no other language model. Your conversations stay in 
 
 **Try it:** https://toontalk.github.io/nano-chat/
 
-- [Guide for students](https://toontalk.github.io/nano-chat/student-guide.html): seven experiments, starting from the bare model.
+- [Guide for students](https://toontalk.github.io/nano-chat/student-guide.html): eight experiments, starting from the bare model.
 - [Guide for teachers](https://toontalk.github.io/nano-chat/teacher-guide.html): what students can learn, what the computers need, a lesson outline.
 - [How it was made](https://toontalk.github.io/nano-chat/making-of.html): the account of building it with Claude, including what went wrong.
 - [Nano beside older models](https://toontalk.github.io/nano-chat/older-models.html): the same page run on GPT-2 from 2019, and Nano beside answers the first ChatGPT gave in December 2022, with 30 examples of each.
@@ -34,6 +34,7 @@ Nano Chat does these jobs in the page instead.
 | No tool calling | A separate small session chooses a tool as JSON. The page runs the tool and hands Nano the result along with your message. |
 | Weak arithmetic | A real calculator in the page, with percentages and date math. Plain arithmetic never goes to the model at all. |
 | No knowledge of recent events | Web search: Wikipedia with no key; Tavily or Serper with your own key; or through Claude, Gemini or ChatGPT if you gave a key for the coach (that AI searches and reports what the pages say, and Nano still writes the answer). Answers cite their sources. |
+| Text only, by default | Chrome's Nano can also take pictures and sound. The paperclip attaches a picture or a sound file, takes a photo, or records from the microphone, and the page hands them to Nano beside your words. |
 | Long documents | A pasted link, a long paste or an attached text file is searched for the relevant passages, or summarized in parts by side sessions. |
 | No memory between chats | Notes. Say "Remember that..." and it is saved in the browser and available in every chat. |
 
@@ -52,9 +53,14 @@ chip under a reply to see what the tool gave it.
 | Save a note / read a note | "Remember that...", and later questions about your own things. |
 | Look back | Questions about earlier parts of a long conversation or an attached document. |
 
-Three more things are not tools Nano chooses, but conveniences of the page:
+Four more things are not tools Nano chooses, but conveniences of the page:
 
-- **Pictures.** When Nano writes SVG code, the page draws it, with the code a click away.
+- **Pictures and sound in.** A picture takes about 263 of Nano's 9,216 tokens whatever its size, and
+  sound about 8 tokens a second. After its reply, Nano is asked separately to put each
+  picture or recording into words. You can read that under it, and the page uses it for
+  the contents list, for looking back, and for the coach. On computers where Chrome gives
+  Nano text only, the paperclip offers files alone.
+- **Pictures out.** When Nano writes SVG code, the page draws it, with the code a click away.
   Ask it to "draw a red circle". The picture is shown through an `<img>`, where nothing in
   it can run, and scripts are stripped before it is drawn or saved.
 - **Save.** The Save button turns the chat into a single web page you can keep or pass on,
@@ -91,6 +97,7 @@ page adds has a switch (the **Parts** button at the top).
 | Web search | Nano answers from what it remembers from training. |
 | Reading links | Nano sees only the address and has to guess what is there. |
 | Long texts | A long text goes into the message as it is and is cut off where memory ends. |
+| Pictures and sound | Nano is told only that a picture or a recording was attached. |
 | Rules of thumb | Nano alone decides which tool each message needs. |
 | Made-up results guard | You see pretend tool results when Nano writes them. |
 | Formatting | You see the raw Markdown characters. |
@@ -157,6 +164,11 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   `r.jina.ai` reader, which you can turn off in Settings.
 - With the coach switched on, each reply it reviews goes to the company whose key you gave,
   together with your message, the few messages before it, and what the tools found.
+- Pictures, photos and recordings stay in this browser with their chat and are given to
+  Nano on your computer. The camera and microphone are used only when you choose "Take a
+  photo" or "Record sound". The coach gets Nano's description of them. A picture itself
+  goes to the coach's company only if you tick "Let the coach see pictures I attach";
+  recordings are never sent.
 - Voice input stays on your computer unless you allow Chrome's online speech recognition.
 - Nothing else leaves your computer. Keys are kept only in this browser, or only until
   the tab is closed if you tick the box beside the key.
@@ -183,6 +195,8 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   - `node tools/build-canvas.mjs`: builds `canvas/nano-chat-canvas.html`, a test copy to paste
     into a Gemini Canvas (see below). `node tools/test-canvas.mjs` checks it, with a stand-in
     for Canvas.
+  - `node tools/test-media.mjs`: pictures and sound, with Chrome's stand-in camera and
+    microphone.
   - `node tools/test-told.mjs`: reading and rewriting the instructions in Settings.
   - `node tools/test-explain.mjs`: "More about this" in the parts panel and Settings.
   - `node tools/test-care.mjs`: deleting chats and notes, keys kept only for a tab, and the
