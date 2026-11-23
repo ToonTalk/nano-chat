@@ -517,7 +517,18 @@ function md(src, sources = []) {
 }
 
 // ───────────────────────────── the model ─────────────────────────────
-const LM = self.LanguageModel;
+let LM = self.LanguageModel;
+// An experiment: ?model=gpt2 runs the page on GPT-2, a model from 2019, in place of Gemini Nano (see gpt2.js).
+// Everything else stays as it is, so the same parts can be tried around a much older model.
+const ALT_KEY = (params.get('model') || '').toLowerCase();
+let alt = null;
+function loadAlt() {
+  return new Promise((res, rej) => {
+    const done = () => { const a = self.NanoChatAlt && self.NanoChatAlt.make(ALT_KEY, { frame: params.get('frame'), device: params.get('device') }); a ? res(a) : rej(new Error(`This page does not know a model called “${ALT_KEY}”. Try ?model=gpt2.`)); };
+    if (self.NanoChatAlt) return done();
+    const s = document.createElement('script'); s.src = 'gpt2.js'; s.onload = done; s.onerror = () => rej(new Error('The file gpt2.js, which runs the older model, could not be loaded.')); document.head.append(s);
+  });
+}
 const LM_OPTS = { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] };
 const SIDE_SYS = 'You follow instructions exactly and write plain, compact text. You never add information that is not in the material you are given.';
 const XMAS = (() => { const n = new Date(); return `${n.getFullYear() + (n.getMonth() === 11 && n.getDate() > 25 ? 1 : 0)}-12-25`; })();      // the next Christmas, for the examples below
@@ -563,7 +574,8 @@ const engine = {
     const s = await base.clone({ signal });
     try { return (await s.prompt(prompt, { responseConstraint: schema, signal })).trim(); } finally { s.destroy(); }
   },
-  async askJSON(base, prompt, schema, signal) { try { return JSON.parse(await this.ask(base, prompt, { schema, signal })); } catch (e) { if (e.name === 'AbortError') throw e; console.warn('askJSON', e); return null; } },
+  // Null unless the reply is a JSON object. (A model that is not held to the schema can write valid JSON of another kind, such as a quoted sentence.)
+  async askJSON(base, prompt, schema, signal) { try { const v = JSON.parse(await this.ask(base, prompt, { schema, signal })); return v && typeof v === 'object' && !Array.isArray(v) ? v : null; } catch (e) { if (e.name === 'AbortError') throw e; console.warn('askJSON', e); return null; } },
   usage() { return this.main && !this.dirty ? (this.main.contextUsage ?? this.main.inputUsage ?? 0) : null; },
 };
 // How Nano's memory is shared out. Everything scales with the window Chrome reports.
@@ -1015,7 +1027,7 @@ async function send(text, atts = []) {
 // One reply, with a given set of parts switched on. Used for the conversation itself and for second tries.
 // Returns true when the exchange went straight into the conversation's own session.
 async function runTurn(chat, user, bot, idx, signal, ctx) {
-  const F = ctx.F; bot.f = { ...F };
+  const F = ctx.F; bot.f = { ...F }; if (alt) bot.model = alt.info.name;
   await gather(chat, user, bot, idx, signal, ctx);
   if (bot.direct) { bot.text = bot.direct; bot.byPage = true; return false; }          // the page answered by itself: a plain sum, or a saved note
   const ev = bot.steps.filter(s => s.evidence).map(s => s.evidence).join('\n\n');
@@ -1324,7 +1336,9 @@ async function nameChat(chat, user, bot) {
 const STEP_ICON = { calculator: '🧮', web_search: '🔎', save_note: '📒', read_note: '📒', recall: '🕘', read_page: '📄', document: '📎' };
 const ui = {
   hint(t) {
-    $('#hint').textContent = t || 'Runs on this computer with Gemini Nano. It is a small model and can be wrong.' +
+    $('#hint').style.color = alt && !t ? 'var(--warn)' : '';
+    $('#hint').textContent = t || (alt ? `An experiment: this tab runs ${alt.info.name} (OpenAI, ${alt.info.date}) on this computer, not Gemini Nano. Where the page says Nano, read ${alt.info.name}.`
+      : 'Runs on this computer with Gemini Nano. It is a small model and can be wrong.') +
       (coachReady() ? ` Coach on: ${coachName()} is sent ${settings.coach.mode === 'every' ? 'every reply' : 'the replies you ask it about'}.` : '');
   },
   parts() { const n = partsOn(), all = n === CORE.length; $('#partsCount').textContent = `${n}/${CORE.length}`; $('#openParts').classList.toggle('partial', !all); ui.hint(); },
@@ -1548,6 +1562,16 @@ function welcome() {
 }
 function door() {
   const d = state.door || { kind: 'checking' };
+  if (alt && d.kind !== 'none') {                      // the experiment with an older model has its own front door
+    const i = alt.info, about = `${i.name} is a language model OpenAI released in ${i.date}, with ${i.params} parameters. It only continues text and was never trained to chat.`;
+    if (d.kind === 'download') return el('div', { class: 'door' }, el('h2', null, `One download first: ${i.name}`),
+      el('p', null, about), el('p', null, `It is a ${i.megabytes.toLocaleString('en-US')} MB download from Hugging Face, with a small program from jsDelivr to run it. Both run in this browser, and nothing you type is sent anywhere.`),
+      el('button', { class: 'big', onclick: () => start(true) }, `Get ${i.name}`));
+    if (d.kind === 'loading') return el('div', { class: 'door' }, el('h2', null, d.pct != null && d.pct < 1 ? `Downloading ${i.name}…` : `Waking up ${i.name}…`),
+      d.pct != null && d.pct < 1 ? el('progress', { value: d.pct, max: 1 }) : el('div', { class: 'status', style: 'justify-content:center' }, el('span', { class: 'spin' }), 'This can take a minute.'));
+    if (d.kind === 'error') return el('div', { class: 'door' }, el('h2', null, `${i.name} did not start`), el('p', null, d.why), el('button', { class: 'big', onclick: () => start(true) }, `Try ${i.name} again`));
+  }
+  if (ALT_KEY && d.kind === 'error') return el('div', { class: 'door' }, el('h2', null, 'The older model did not start'), el('p', null, d.why));
   if (d.kind === 'none') return el('div', { class: 'door' }, el('h2', null, 'This page needs Chrome’s built-in AI'),
     el('p', null, 'Nano Chat talks only to Gemini Nano, the small model that Chrome runs on your own computer. This browser does not offer it.'),
     el('ul', null, el('li', null, 'Use Chrome 148 or newer on a Windows, Mac or Linux computer, or a Chromebook Plus.'), el('li', null, 'The computer needs about 22 GB of free disk space, and either a graphics card with more than 4 GB of memory or 16 GB of RAM.'), el('li', null, 'Phones and tablets are not supported yet.')),
@@ -1926,6 +1950,10 @@ async function frameCheck() {
 $('#frameCheck').onclick = () => frameCheck();
 async function start(byClick) {
   try {
+    if (ALT_KEY && !alt) {
+      alt = await loadAlt(); LM = alt.LM;
+      document.title = `Nano Chat on ${alt.info.name}`; ui.hint();
+    }
     if (!LM) { state.door = { kind: 'none' }; ui.thread(); return; }
     const a = await LM.availability(LM_OPTS);
     if (a === 'unavailable') { state.door = { kind: 'none', why: 'Chrome says this computer cannot run the model.' }; ui.thread(); return; }
@@ -1955,7 +1983,7 @@ async function start(byClick) {
   if (last) { state.chat = last; ui.chats(); ui.thread(); ui.title(); } else newChat();
   start(false);
 })();
-window.NC = { frameCheck, canvasAsk, canvasCall, canvas, CANVAS_MODELS, dbState, own, openOwnTab, POPPED, state, engine, settings, B, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
+window.NC = { frameCheck, canvasAsk, canvasCall, canvas, CANVAS_MODELS, dbState, own, openOwnTab, POPPED, state, engine, settings, B, get alt() { return alt; }, start, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
   FEATURES, setPart, setParts, defaultParts, partsLabel, partsDiff, rerun, viewFrom, nudgeFor, startCoach, coachSay, askCoach, askAI, aiSearch, coachPrompt, parseLoose, showParts, showRerun, showSettings, newChat, keepAnswer, coachTries, saveChat, cleanSvg, speak, speakable, stopSpeaking, micToggle, tts, mic };
 </script>
 </body>

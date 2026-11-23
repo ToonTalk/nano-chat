@@ -8,6 +8,7 @@ No account, no API key, and no other language model. Your conversations stay in 
 - [Guide for students](https://toontalk.github.io/nano-chat/student-guide.html): seven experiments, starting from the bare model.
 - [Guide for teachers](https://toontalk.github.io/nano-chat/teacher-guide.html): what students can learn, what the computers need, a lesson outline.
 - [How it was made](https://toontalk.github.io/nano-chat/making-of.html): the account of building it with Claude, including what went wrong.
+- [Nano beside older models](https://toontalk.github.io/nano-chat/older-models.html): the same page run on GPT-2 from 2019, and Nano beside answers the first ChatGPT gave in December 2022, with 30 examples of each.
 - Ken Kahn's post: [Claude helped me make an app for exploring how to turn an LLM into a chatbot](https://docs.google.com/document/d/100TuZ1hSkCIE6gXLNsJulXOVqc7B5ghLfRsPteOIb-Y/edit?usp=sharing)
 
 ![Nano Chat answering with a calculator and a Wikipedia search](screenshots/search.png)
@@ -174,6 +175,27 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   - `node tools/test-extras.mjs`: SVG pictures, saving a chat, and voice. Headless Chrome
     has no microphone or loudspeaker, so Chrome's speech recognition and speech output are
     replaced by stand-ins.
+
+## An experiment: the same page on GPT-2
+
+Add `?model=gpt2` to the address ([try it](https://toontalk.github.io/nano-chat/?model=gpt2)) and
+the page runs on GPT-2 small, a model OpenAI released in February 2019, in place of Gemini
+Nano. `gpt2.js` gives GPT-2 the same face Chrome gives Nano, so every part runs unchanged
+around a much older model. It is a 280 MB download from Hugging Face, run in the browser by
+transformers.js from jsDelivr, and nothing you type is sent anywhere. GPT-2 was never
+trained to chat, so the file lays the conversation out as a script for it to continue.
+
+What happened, and how Nano compares with the answers the first ChatGPT gave in December
+2022, is in [Nano beside older models](https://toontalk.github.io/nano-chat/older-models.html).
+In short: the parts cannot make a chatbot of GPT-2, and on 29 questions a Claude model
+judging blind put bare Nano and the first ChatGPT about level. It is a small sample with
+one judge.
+
+The scripts behind that report are in `tools/`: `recorded-fetch.mjs` draws the questions
+from the [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3) data set (CC BY-SA 4.0),
+`recorded-nano.mjs` and `recorded-gpt2.mjs` collect the answers, `recorded-judge.mjs` has
+Claude judge them (it needs `ANTHROPIC_API_KEY`), and `build-comparison.mjs` builds the page.
+`try-gpt2.mjs` and `try-gpt2-app.mjs` time GPT-2 by itself and in the page.
 
 ## A test copy for Gemini Canvas
 
