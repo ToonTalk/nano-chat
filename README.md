@@ -86,7 +86,7 @@ page adds has a switch (the **Parts** button at the top).
 | Today's date | Nano has no clock and can only guess the date. |
 | Notes | Nothing carries over from one chat to the next. |
 | Contents list | When memory fills, the oldest messages simply fall out of view. |
-| Looking back | Nano cannot reread anything that has left its memory. |
+| Looking back | Once old messages no longer fit in Nano's memory, Nano cannot go back and read them. |
 | Calculator | Nano does arithmetic in its head. |
 | Web search | Nano answers from what it remembers from training. |
 | Reading links | Nano sees only the address and has to guess what is there. |
@@ -96,6 +96,9 @@ page adds has a switch (the **Parts** button at the top).
 | Formatting | You see the raw Markdown characters. |
 | Chat titles | A chat is named by its first words. |
 | Second look (extra, off at first) | A second copy of Nano checks each answer. |
+
+In the Parts panel each part has a "More about this" line that explains it at more length,
+with an example. Settings has the same for its less obvious choices.
 
 Four things make the experiments quick:
 
@@ -181,66 +184,34 @@ calculator. Open the tool chips and the sources to check what an answer rests on
     into a Gemini Canvas (see below). `node tools/test-canvas.mjs` checks it, with a stand-in
     for Canvas.
   - `node tools/test-told.mjs`: reading and rewriting the instructions in Settings.
+  - `node tools/test-explain.mjs`: "More about this" in the parts panel and Settings.
   - `node tools/test-care.mjs`: deleting chats and notes, keys kept only for a tab, and the
     coach's question box.
   - `node tools/test-extras.mjs`: SVG pictures, saving a chat, and voice. Headless Chrome
     has no microphone or loudspeaker, so Chrome's speech recognition and speech output are
     replaced by stand-ins.
 
-## An experiment: the same page on other models
+## Experiments with other models
 
-`open-models.js` gives an open model the same face Chrome gives Gemini Nano, so every part
-runs unchanged around it. Add `?model=` and a name to the address. The model is downloaded
-from Hugging Face and run in the browser by transformers.js from jsDelivr; nothing you type
-is sent anywhere.
+For a few days in November 2026 the page could run another model in Nano's place: GPT-2
+from 2019, to see what the parts can do for an old model, and two small open models
+(Qwen3 0.6B and Gemma 3 270M), to see whether they could reach devices that cannot run
+Nano. Both experiments are written up, and the switch has been taken out of the page.
 
-### Small models, for computers that cannot run Nano
+- [Nano beside older models](https://toontalk.github.io/nano-chat/older-models.html): GPT-2,
+  and Nano beside the answers the first ChatGPT gave in December 2022. In short: the parts
+  cannot make a chatbot of GPT-2, and on 29 questions a Claude model judging blind put bare
+  Nano and the first ChatGPT about level. It is a small sample with one judge.
+- [How it was made](https://toontalk.github.io/nano-chat/making-of.html#other-models): the
+  small open models. Qwen3 0.6B ran the whole page well on a desktop graphics card, but
+  froze a phone and could not run usefully on it by any route, so the idea was dropped.
 
-| Add to the address | Model | Download |
-| --- | --- | --- |
-| `?model=qwen-0.6b` | Qwen3 0.6B (Alibaba, 2025) | 570 MB |
-| `?model=gemma-270m` | Gemma 3 270M (Google, 2025) | 273 MB |
-| `?model=smollm2-360m` | SmolLM2 360M (Hugging Face, 2024). Listed, not yet tried. | 273 MB |
-
-Tried on 23 November 2026 in Chrome 157 on a desktop with an NVIDIA graphics card, with the
-quick test (`node tools/test.mjs quick --model=qwen-0.6b`), which has 12 checks that
-depend on the model:
-
-- **Qwen3 0.6B passed all 12**: it chose the calculator, web search, notes and page reading
-  when it should, and used what they returned. It wrote about 35 tokens a second.
-- **Gemma 3 270M passed 5 of 12.** It never chose a tool correctly, and some replies were
-  nonsense.
-
-Two limits matter:
-
-- **They need WebGPU.** On the processor alone Qwen3 0.6B wrote less than one token a
-  second, and Gemma's small builds would not load. So this reaches computers whose graphics
-  card is too small for Nano, not computers with none. It has not been tried on a weak
-  laptop, a Chromebook or a phone.
-- **The page does part of Chrome's job.** Chrome holds Nano to a JSON shape when the page
-  asks for one. Here the file writes the braces and field names itself, lets the model fill
-  in each value, and allows only the listed words where a choice is asked for.
-
-This is an experiment behind an address, not yet something the page offers when Nano is
-missing.
-
-### GPT-2, from 2019
-
-`?model=gpt2` ([try it](https://toontalk.github.io/nano-chat/?model=gpt2)) runs the page on
-GPT-2 small, a 280 MB download. GPT-2 was never trained to chat, so the file lays the
-conversation out as a script for it to continue.
-
-What happened, and how Nano compares with the answers the first ChatGPT gave in December
-2022, is in [Nano beside older models](https://toontalk.github.io/nano-chat/older-models.html).
-In short: the parts cannot make a chatbot of GPT-2, and on 29 questions a Claude model
-judging blind put bare Nano and the first ChatGPT about level. It is a small sample with
-one judge.
-
-The scripts behind that report are in `tools/`: `recorded-fetch.mjs` draws the questions
-from the [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3) data set (CC BY-SA 4.0),
-`recorded-nano.mjs` and `recorded-gpt2.mjs` collect the answers, `recorded-judge.mjs` has
-Claude judge them (it needs `ANTHROPIC_API_KEY`), and `build-comparison.mjs` builds the page.
-`try-model.mjs` times a model by itself, and `try-gpt2-app.mjs` runs GPT-2 in the page.
+The scripts behind the first report are in `tools/`: `recorded-fetch.mjs` draws the
+questions from the [HC3](https://huggingface.co/datasets/Hello-SimpleAI/HC3) data set
+(CC BY-SA 4.0), `recorded-nano.mjs` collects Nano's answers, `recorded-judge.mjs` has
+Claude judge them (it needs `ANTHROPIC_API_KEY`), and `build-comparison.mjs` builds the
+page. The file that ran the other models, `open-models.js`, and its tests are in the
+repository's history (last present in commit `78cd80f`).
 
 ## A test copy for Gemini Canvas
 

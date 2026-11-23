@@ -81,7 +81,7 @@ try {
   const out = await b.eval(`(() => { const orig = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () {}; try { return NC.saveChat(); } finally { HTMLAnchorElement.prototype.click = orig; } })()`);
   fs.writeFileSync(path.join(shots, out.name), out.html);
   check('the file is a whole page with a title and a favicon', /^<!doctype html>/.test(out.html) && /<title>[^<]+ · Nano Chat<\/title>/.test(out.html) && /<link rel="icon" href="data:image\/svg\+xml/.test(out.html) && /<style>/.test(out.html) && !/<script/i.test(out.html), out.html.slice(0, 200));
-  check('it holds the messages, the tool chips, and the picture', out.html.includes('create the SVG that will display a star') && out.html.includes('11.61') && /class="step/.test(out.html) && /class="svgview"/.test(out.html) && /64\.50 \* 0\.18/.test(out.html));
+  check('it holds the messages, the tool chips, and the picture', out.html.includes('create the SVG that will display a star') && out.html.includes('11.61') && /class="step/.test(out.html) && /class="svgview"/.test(out.html) && /64\.50 \* (0\.18|18%)|(0\.18|18%) \* 64\.50/.test(out.html));      // Nano writes the sum either way
   check('it has no buttons or leftover controls', !/<button/i.test(out.html) && !/Try again…/.test(out.html) && !/Read aloud/.test(out.html));
   // open the saved file by itself and look at it
   await b.send('Page.navigate', { url: 'file:///' + path.join(shots, out.name).replace(/\\/g, '/') });

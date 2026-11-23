@@ -13,7 +13,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 syste
 nav { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); font-size: 15px; }
 nav a { color: var(--muted); text-decoration: none; } nav a:hover, nav a.here { color: var(--ink); } nav .brand { font-weight: 650; color: var(--ink); margin-right: auto; }
 main { max-width: 720px; margin: 0 auto; padding: 28px 20px 60px; }
-h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; } h2 { font-size: 22px; margin: 38px 0 8px; }
+h1 { font-size: 32px; line-height: 1.2; margin: 0 0 8px; } h2 { font-size: 22px; margin: 38px 0 8px; } h3 { font-size: 18px; margin: 24px 0 6px; }
 .lead { font-size: 19px; color: var(--muted); margin: 0 0 22px; }
 a { color: var(--accent); } img { max-width: 100%; border: 1px solid var(--line); border-radius: 12px; display: block; margin: 14px 0; }
 code { background: var(--code); border-radius: 6px; padding: .1em .4em; font: .92em ui-monospace, Consolas, monospace; }
@@ -112,6 +112,41 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 <p>Ken then agreed to a public link to the Canvas, and tried it himself in an incognito window. The coach failed with a message that it was "outside Gemini Canvas". It was not outside. Google gives the same refusal to a page that is not in Canvas and to a visitor who is not signed in to Google, and Claude's message had assumed the first. The message now says which it is, and what to do.</p>
 <p>Two smaller mistakes came out along the way. One line of the new code read "the coach is ready if it needs no key, or..." where the "or" bound more tightly than intended, so the coach's button never appeared; the first automated check caught it. And Claude's first plan for the new tab, opening it from a stored copy of the page, was dropped before it was tried: as Claude reads Chrome's rules, such a tab is cut off from the page that opened it, and the coach's requests depend on that connection. The page is written into an empty tab instead.</p>
 <p>None of this is documented by Google, and it may stop working. The public link is a snapshot, so it does not follow later changes to the app.</p>
+
+<h2 id="other-models">An idea that was dropped: other models in Nano's place</h2>
+<p>Gemini Nano needs a fairly strong desktop computer. On November 23 Ken asked whether people without one could be given something else:</p>
+<blockquote>For potential users that can't run desktop Chrome or are too weak could the app use an open weight small LLM that will run on more devices?</blockquote>
+<p>Most of the plumbing existed. The day before, to compare Nano with GPT-2 from 2019, a separate file had been written that gives another model the same face Chrome gives Nano, so that the whole page runs unchanged around it. That experiment is in <a href="older-models.html">Nano beside older models</a>. The same file was extended to two small models that are trained to chat, each loaded by adding <code>?model=</code> to the address.</p>
+<p>Chrome does two things for Nano that the page now had to do itself. It lays a conversation out the way the model was trained on, and it holds the model to a JSON shape when the page asks which tool to use. Without the second, the smaller model simply copied the example it had been shown, <code>{"tool": "..."}</code>. So the file wrote the braces and the field names itself, let the model fill in each value, and allowed only the listed tool names where a choice was asked for.</p>
+<h3>On a desktop it worked</h3>
+<div class="scroll"><table>
+<tr><th></th><th>Qwen3 0.6B</th><th>Gemma 3 270M</th></tr>
+<tr><td>Download</td><td>570 MB</td><td>273 MB</td></tr>
+<tr><td>Checks that depend on the model, out of 12</td><td>12</td><td>5</td></tr>
+<tr><td>Chose the right tool</td><td>every time</td><td>never</td></tr>
+<tr><td>Writing speed on a desktop graphics card</td><td>about 35 tokens a second</td><td>about 30</td></tr>
+</table></div>
+<p>Both needed the graphics card. On the desktop's processor alone Qwen3 wrote less than one token a second. A third small model, SmolLM2 360M, passed 4 of the 12.</p>
+<h3>On a phone and a tablet it did not</h3>
+<p>Ken opened the Qwen3 link on his own devices. His Pixel 10 Pro froze and had to be restarted. On his Galaxy Tab A9+ the tab closed the moment the download finished. The phone's trouble was one he had met two weeks earlier with another app, and had <a href="https://docs.google.com/document/d/1gjoGHQuqtyAHFI6BvlOQzHE1RszEHdW4dugX9ljedDs/edit?usp=sharing">written about</a>: its graphics chip, made by Imagination, runs models stored as 4-bit numbers about eighty times too slowly. That fault <a href="https://github.com/microsoft/onnxruntime/issues/33970">had been reported</a> then. Qwen3's small build is 4-bit.</p>
+<p>Ken connected the phone to the computer by USB, and Claude ran the alternatives on it:</p>
+<div class="scroll"><table>
+<tr><th>On the Pixel 10 Pro</th><th>Result</th></tr>
+<tr><td>Qwen3 0.6B, 4-bit, graphics chip</td><td>The phone froze.</td></tr>
+<tr><td>Qwen3 0.6B, 16-bit, processor</td><td>Ran out of memory while starting.</td></tr>
+<tr><td>Qwen3 0.6B, 8-bit, processor</td><td>Wrote 2.7 tokens a second and read 6.</td></tr>
+<tr><td>Gemma 3 270M, 16-bit, graphics chip</td><td>Wrote 3.5 tokens a second.</td></tr>
+<tr><td>Gemma 3 270M, 16-bit, processor</td><td>Wrote 16.5 tokens a second and read 64.</td></tr>
+</table></div>
+<p>So the model that was good enough could not run on the phone by any route, and the model that could run was not good enough. Reading was the worse half: the page sends long instructions with every request, and a small device reads them slowly each time.</p>
+<h3>What went wrong on the way</h3>
+<ul>
+  <li><b>The link was public before any device had been checked.</b> For some hours anyone who opened it on a Pixel like Ken's could have had their phone freeze, and Ken's did. The page should have looked at the device first. A check that does this was then written and confirmed on the phone, but by then the decision was to drop the idea.</li>
+  <li><b>Claude named phones as the biggest gain before any phone had been tried.</b> Asked how many more people Qwen3 would reach, it listed phones and tablets first, while saying it could not count them. The first two tried both failed.</li>
+  <li><b>A test had gone stale overnight.</b> It expected 33 days to Christmas, which was right on the day it was written. It reported Qwen3's correct answer of 32 as a failure.</li>
+</ul>
+<h3>Where it was left</h3>
+<p>Ken decided to drop the switch, and it has been taken out of the page. Nano Chat is again what its first request asked for: a chatbot that relies only on Gemini Nano. The file as first published is in the project's <a href="https://github.com/ToonTalk/nano-chat/commit/78cd80f">history</a>. Two things would have to change before the idea is worth trying again: the model would have to keep its reading of a prompt from one request to the next, and the processor would have to be allowed to use all its cores, which the place this page is hosted does not permit.</p>
 
 <h2>Still unverified</h2>
 <ul>

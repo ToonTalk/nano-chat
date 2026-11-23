@@ -28,7 +28,8 @@ export function prose(n, t) {
 <p>The dates are from <a href="https://developers.openai.com/api/docs/deprecations">OpenAI’s</a> and <a href="https://platform.claude.com/docs/en/about-claude/model-deprecations">Anthropic’s</a> lists of retired models. So there were two ways forward: run GPT-2, and use answers that GPT-3.5 gave while it was still running.</p>
 
 <h2>Experiment 1: Nano Chat on GPT-2</h2>
-<p>Nano Chat reaches Gemini Nano through a handful of calls: make a session, send it a message, copy it, add to it. A new file, <code>open-models.js</code>, gives GPT-2 the same face. Opening the page with <code>?model=gpt2</code> loads it, and the rest of the page, every part included, runs unchanged on a model from 2019.</p>
+<p>Nano Chat reaches Gemini Nano through a handful of calls: make a session, send it a message, copy it, add to it. For this experiment a separate file gave GPT-2 the same face, so that the rest of the page, every part included, ran unchanged on a model from 2019. Adding <code>?model=gpt2</code> to the address loaded it.</p>
+<div class="note">That switch has since been taken out of Nano Chat, so GPT-2 can no longer be tried there. The file is in the project’s history on GitHub (<code>open-models.js</code>, as of 23 November 2026), and <a href="making-of.html#other-models">how it was made</a> says why it went.</div>
 <p>One thing had to be added. GPT-2 was never trained to hold a conversation. It only continues text. So the stand-in lays each conversation out as a script, with lines starting “User:” and “Assistant:”, lets GPT-2 write on from “Assistant:”, and stops it when it begins a line for the user. Gemini Nano needs nothing like this, because conversation was part of its training.</p>
 <h3>What was measured</h3>
 <div class="scroll"><table>
@@ -39,7 +40,7 @@ export function prose(n, t) {
 <tr><td>Speed</td><td>About 22 tokens a second for a short prompt, on the processor alone</td><td>Not measured here</td></tr>
 <tr><td>First start</td><td>About 32 seconds, download included</td><td>About 17 seconds once downloaded</td></tr>
 </table></div>
-<p>This was GPT-2 <b>small</b>, the first and smallest of the four sizes OpenAI released in 2019. The largest has 1.5 billion parameters. The stand-in lists all four, but only the small one has been tried.</p>
+<p>This was GPT-2 <b>small</b>, the first and smallest of the four sizes OpenAI released in 2019. The largest has 1.5 billion parameters. The stand-in listed all four, but only the small one was tried.</p>
 <h3>What happened</h3>
 <ul>
 <li><b>With every part off</b>, GPT-2 wrote text that sounds like talk and says nothing. Asked “when did freddie mercury die”, it replied “I’m going to be doing this.” Twice it repeated the question back.</li>
@@ -101,15 +102,13 @@ ${t.judgeTable}
 <p>The judge also ranked two answers from a much older model, GPT-2, which are shown in <a href="#gpt2-examples">the section before this one</a>. That is why the places run to 5. <a href="#limits">What this comparison does not show</a> is worth reading before drawing conclusions from it.</p>`;
   const end = `
 <h2>Running it again</h2>
-<p>Everything here can be repeated with the scripts in <code>tools/</code>. They need Windows, Node 24 and Chrome with Gemini Nano installed, and the last needs a Claude key.</p>
+<p>The part about ChatGPT and Nano can be repeated with the scripts in <code>tools/</code>. The scripts that ran GPT-2 went when the switch was removed, and are in the project’s history. They need Windows, Node 24 and Chrome with Gemini Nano installed, and the last needs a Claude key.</p>
 <ul>
 <li><code>node tools/recorded-fetch.mjs</code> draws the same 30 questions from HC3.</li>
 <li><code>node tools/recorded-nano.mjs</code> has Gemini Nano answer them, then judge.</li>
-<li><code>node tools/recorded-gpt2.mjs</code> has GPT-2 answer them through the page. <code>node tools/try-gpt2-app.mjs</code> runs the eight everyday probes instead.</li>
 <li><code>node tools/recorded-judge.mjs</code> has Claude judge. Both rounds of judging together used about ${Math.round((n.tokens.in + 62878) / 1000)},000 input tokens and ${Math.round((n.tokens.out + 12807) / 1000)},000 output tokens.</li>
 <li><code>node tools/build-comparison.mjs</code> builds this page from the records.</li>
 </ul>
-<p>To try GPT-2 yourself, open Nano Chat with <code>?model=gpt2</code> at the end of the address.</p>
 <footer>The questions, ChatGPT’s answers and the people’s answers are from HC3: Guo et al., <a href="https://arxiv.org/abs/2301.07597">How Close is ChatGPT to Human Experts? Comparison Corpus, Evaluation, and Detection</a> (2023), shared under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. They are shown as recorded, apart from line breaks and accented letters that had been garbled. GPT-2 was run with <a href="https://huggingface.co/docs/transformers.js">transformers.js</a> from the <code>onnx-community/gpt2-ONNX</code> weights.</footer>`;
   return { top, gpt2Intro, chatIntro, end };
 }

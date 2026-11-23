@@ -1,16 +1,13 @@
 // End-to-end check against the real Gemini Nano in headless Chrome.
 //   node tools/test.mjs            the quick run: calculator unit checks, tools, notes
 //   node tools/test.mjs long       also a long conversation in a pretend-small window: summaries, contents, recall
-//   node tools/test.mjs quick --model=qwen-0.6b --device=webgpu      the same checks with an open model in Nano's place (see open-models.js)
 import { launch } from './nano-harness.mjs';
 import path from 'node:path';
 import fs from 'node:fs';
 const root = path.resolve(import.meta.dirname, '..');
-const flag = n => (process.argv.find(a => a.startsWith('--' + n + '=')) || '').split('=')[1] || '';
-const model = flag('model'), device = flag('device');
-const shots = path.join(root, 'captures', model); fs.mkdirSync(shots, { recursive: true });
-const mode = process.argv.slice(2).find(a => !a.startsWith('--')) || 'quick';
-const b = await launch({ root, withModel: !model });
+const shots = path.join(root, 'captures'); fs.mkdirSync(shots, { recursive: true });
+const mode = process.argv[2] || 'quick';
+const b = await launch({ root });
 let pass = 0, fail = 0, fakes = 0;
 const check = (name, ok, extra = '') => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${extra ? '  — ' + extra : ''}`); };
 const ask = async (text) => {
@@ -24,11 +21,8 @@ const ask = async (text) => {
 };
 const used = (r, tool) => r.steps.some(s => s.tool === tool && s.status === 'ok');
 try {
-  const q = [mode === 'long' ? 'window=1500' : '', model ? 'model=' + model : '', device ? 'device=' + device : ''].filter(Boolean).join('&');
-  await b.goto('/index.html' + (q ? '?' + q : ''));
-  if (model) { await b.waitFor(`window.NC && NC.state.door && NC.state.door.kind === 'download'`, { timeout: 60000 }); await b.eval('NC.start(true), 1'); }
-  await b.waitFor('window.NC && NC.engine.ready', { timeout: model ? 1500000 : 180000 });
-  if (model) console.log('model', await b.eval('JSON.stringify({ name: NC.alt.info.name, dtype: NC.alt.info.dtype, device: NC.alt.info.device, megabytes: NC.alt.info.megabytes, loadMs: NC.alt.stats.loadMs })'));
+  await b.goto(mode === 'long' ? '/index.html?window=1500' : '/index.html');
+  await b.waitFor('window.NC && NC.engine.ready', { timeout: 180000 });
   console.log('window', await b.eval('NC.engine.W'), 'real', await b.eval('NC.engine.realW'));
 
   // calculator, no model involved
@@ -72,13 +66,11 @@ try {
     await b.eval(`document.querySelector('#dClose').click(); document.querySelector('#openNotes').click()`); await b.screenshot(path.join(shots, 'notes.png'));
     await b.eval(`document.querySelector('#dClose').click(); document.querySelector('#openSettings').click()`); await b.screenshot(path.join(shots, 'settings.png'));
     // does it also work opened straight from the disk, with no server?
-    if (!model) {
     await b.send('Page.navigate', { url: 'file:///' + path.join(root, 'index.html').replace(/\\/g, '/') });
     try { await b.waitFor('window.NC && (NC.engine.ready || (NC.state.door && NC.state.door.kind !== "loading" && NC.state.door.kind !== "checking"))', { timeout: 90000 }); } catch {}
     const f = await b.eval('JSON.stringify({ ready: NC.engine.ready, door: NC.state.door })');
     console.log('FILE URL', f);
     if (JSON.parse(f).ready) { r = await ask('What is the capital of France? One word.'); check('works from a file:// address', /paris/i.test(r.text)); }
-    }
   } else {
     const convo = [
       "I'm planning a week in Lisbon in May with my partner Priya. Our budget is 1,800 euros in total.",
@@ -139,7 +131,6 @@ try {
     check('a long text is summarized in parts', /parts by side sessions/.test(r7.steps.join('|')) && /fair/i.test(r7.text));
   }
 } catch (e) { fail++; console.log('TEST CRASHED', e.stack || e); }
-if (model) { try { console.log('\nSPEED (tokens a second)', await b.eval('JSON.stringify(NC.alt.rates())'), 'STATS', await b.eval('JSON.stringify(NC.alt.stats)')); } catch {} }
 if (b.errors.length) { fail++; console.log('PAGE ERRORS', b.errors); }
 const warn = b.log.filter(l => /^\[(error|warning)\]/.test(l)); if (warn.length) console.log('CONSOLE', warn.slice(-15));
 console.log(`\n${pass} passed, ${fail} failed`);
