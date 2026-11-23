@@ -64,12 +64,16 @@ const gpt2Examples = sample.map((s, i) => `<details class="ex"><summary><span cl
 <p class="qfull"><b>The question</b> (${esc(s.kind)}): ${esc(s.question)}</p>${block(s, 'gpt2')}${block(s, 'gpt2full')}</details>`).join('\n');
 const nanoSays = s => { const out = []; for (const m of ['bare', 'full']) { const a = nano.nanoJudge[`${s.id}|${m}|gpt-first`], b = nano.nanoJudge[`${s.id}|${m}|nano-first`]; if (!a || !b) continue; const lab = m === 'bare' ? 'its bare answer' : 'its answer with all parts';
   const say = p => p === 'gpt35' ? 'ChatGPT’s' : p === 'nano' ? 'its own' : p === 'same' ? '“the same”' : 'nothing usable';
-  out.push(a.pick === b.pick ? `Against ${lab}, Nano chose ${say(a.pick)} in both orders${a.why ? ` (“${esc(a.why)}”)` : ''}.` : `Against ${lab}, Nano chose ${say(a.pick)} when ChatGPT’s came first and ${say(b.pick)} when its own came first.`); }
+  out.push(a.pick === b.pick ? `Against ${lab}, Nano chose ${say(a.pick)} in both orders${a.why ? ` (“${esc(a.why.replace(/Answer A(?![a-z])/g, '[ChatGPT’s answer]').replace(/Answer B(?![a-z])/g, '[its own answer]'))}”)` : ''}.` : `Against ${lab}, Nano chose ${say(a.pick)} when ChatGPT’s came first and ${say(b.pick)} when its own came first.`); }
   return out.length ? `<p class="why"><b>Nano as judge:</b> ${out.join(' ')}</p>` : ''; };
-const chatExamples = sample.map((s, i) => { const v = judged.verdicts[s.id]; return `<details class="ex"><summary><span class="n">${i + 1}</span> ${q(s)} ${v ? `<span class="chip">${v.by.gpt35.correct} · ${v.by.bare.correct} · ${v.by.full.correct}</span>` : ''}</summary>
-<p class="qfull"><b>The question</b> (${esc(s.kind)}): ${esc(s.question)}</p>${broken(s) ? '<p class="note">This recording is broken: the data set holds a copy of the ChatGPT screen where the answer should be. The question is left out of every count in this report.</p>' : ''}${v && v.note ? `<p class="why"><b>What separated the answers, said the judge:</b> ${esc(named(s, v.note))}</p>` : ''}
-${block(s, 'gpt35')}${block(s, 'bare')}${block(s, 'full')}${nanoSays(s)}
-<details class="human"><summary>The person’s answer in the data set, which the judge could consult</summary>${show(lines(s.human))}</details></details>`; }).join('\n');
+// In this section the verdicts are one click further in, so that a reader can judge the answers first.
+const plain = (s, w) => `<h4>${NAME[w]} <small>(${YEAR[w]})</small></h4>${facts(s, w)}${show(answerOf(s, w))}`;
+const verdict = (s, w) => { const b = (judged.verdicts[s.id] || {}).by; if (!b) return ''; const x = b[w]; return `<p class="why"><b>${NAME[w]}:</b> correct ${x.correct} of 5, helpful ${x.helpful} of 5, placed ${x.rank} of 5.${x.problems ? ' ' + esc(x.problems) : ''}</p>`; };
+const chatExamples = sample.map((s, i) => { const v = judged.verdicts[s.id]; return `<details class="ex"><summary><span class="n">${i + 1}</span> ${q(s)}</summary>
+<p class="qfull"><b>The question</b> (${esc(s.kind)}): ${esc(s.question)}</p>${broken(s) ? '<p class="note">This recording is broken: the data set holds a copy of the ChatGPT screen where the answer should be. The question is left out of every count in this report.</p>' : ''}
+${plain(s, 'gpt35')}${plain(s, 'bare')}${plain(s, 'full')}
+<details class="human verdicts"><summary>What the judge said</summary>${v && v.note ? `<p class="why"><b>What separated the answers:</b> ${esc(named(s, v.note))}</p>` : ''}${verdict(s, 'gpt35')}${verdict(s, 'bare')}${verdict(s, 'full')}${nanoSays(s)}</details>
+<details class="human"><summary>The answer a person wrote in the data set, which the judge could consult</summary>${show(lines(s.human))}</details></details>`; }).join('\n');
 
 const P = prose(numbers, { scoreTable, kindTable, judgeTable, NAME });
 const html = `<!doctype html>
@@ -104,7 +108,7 @@ details.ex[open] { padding-bottom: 12px; } details.ex[open] > summary { border-b
 .chip { display: inline-block; font-size: 13px; color: var(--muted); background: var(--code); border-radius: 999px; padding: 1px 9px; margin-left: 4px; white-space: nowrap; font-weight: 400; }
 .ans { white-space: pre-wrap; overflow-wrap: anywhere; border-left: 3px solid var(--line); padding: 2px 0 2px 12px; margin: 6px 0; font-size: 16px; }
 .none, .facts { color: var(--muted); font-size: 14.5px; margin: 2px 0; } .why { font-size: 15px; color: var(--muted); margin: 6px 0; } .qfull { margin: 8px 0; }
-details.human { margin-top: 10px; font-size: 15px; } details.human summary { cursor: pointer; color: var(--muted); }
+details.human { margin-top: 10px; font-size: 15px; } details.human summary { cursor: pointer; color: var(--muted); } details.verdicts summary { color: var(--accent); font-weight: 600; }
 footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px solid var(--line); padding-top: 14px; }
 </style>
 </head>

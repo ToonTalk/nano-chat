@@ -95,7 +95,10 @@ ${t.judgeTable}
 </ul>`;
 
   const gpt2Intro = `<p>The same 30 questions, answered by GPT-2 small through Nano Chat. Open a question to see both answers. The two numbers on each line are the judge’s scores for correctness, from 1 to 5: first with every part off, then with every part on.</p>`;
-  const chatIntro = `<p>Open a question to see ChatGPT’s answer from December 2022, Gemini Nano’s bare answer and Nano’s answer with every part on, with the judge’s scores and what Nano made of them as judge. The three numbers on each line are the judge’s scores for correctness, in that order.</p>`;
+  // The guides link straight to this section, so it has to make sense to a reader who has seen nothing above it.
+  const chatIntro = `<p>The first ChatGPT came out in November 2022 and amazed people. Here are 30 questions it was asked in its first weeks, each with the answer it gave then and the answers Gemini Nano gives today: one from the bare model, and one with every part of Nano Chat switched on.</p>
+<p><b>Open a question, read the three answers, and decide for yourself which is best.</b> Then open “What the judge said” beneath them. The judge was another AI, a Claude model, which was not told who wrote which answer. It gave each answer a score from 1 to 5 for being correct, another for being helpful, and a place among the answers. It can be wrong too. Below its verdicts is what Nano said when it was shown two of the answers, unlabeled, and asked which was better.</p>
+<p>The judge also ranked two answers from a much older model, GPT-2, which are shown in <a href="#gpt2-examples">the section before this one</a>. That is why the places run to 5. <a href="#limits">What this comparison does not show</a> is worth reading before drawing conclusions from it.</p>`;
   const end = `
 <h2>Running it again</h2>
 <p>Everything here can be repeated with the scripts in <code>tools/</code>. They need Windows, Node 24 and Chrome with Gemini Nano installed, and the last needs a Claude key.</p>
