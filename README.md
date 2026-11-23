@@ -97,7 +97,7 @@ page adds has a switch (the **Parts** button at the top).
 | Chat titles | A chat is named by its first words. |
 | Second look (extra, off at first) | A second copy of Nano checks each answer. |
 
-Three things make the experiments quick:
+Four things make the experiments quick:
 
 - **Try again.** Under any reply, "Try again…" runs the same message with other parts
   switched on and shows the answers side by side. When a reply would probably have been
@@ -106,6 +106,11 @@ Three things make the experiments quick:
   Nano does not answer the same way twice. "Run 3 times" shows how much is chance.
 - **A small memory.** A switch pretends Nano's memory is 1,500 tokens, so the contents list
   and looking back show up after a few messages. `?window=1500` in the address does the same.
+
+- **Rewrite the instructions.** Settings shows the words the page gives Nano before your
+  first message, the "system prompt", and lets you change them: the briefing, and the line
+  each kind of part adds. "Back to the page's words" undoes it. A reply written under your
+  own instructions says so, and the coach is shown them.
 
 Each reply records which parts were on when it was written.
 
@@ -172,6 +177,7 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   - `node tools/build-canvas.mjs`: builds `canvas/nano-chat-canvas.html`, a test copy to paste
     into a Gemini Canvas (see below). `node tools/test-canvas.mjs` checks it, with a stand-in
     for Canvas.
+  - `node tools/test-told.mjs`: reading and rewriting the instructions in Settings.
   - `node tools/test-extras.mjs`: SVG pictures, saving a chat, and voice. Headless Chrome
     has no microphone or loudspeaker, so Chrome's speech recognition and speech output are
     replaced by stand-ins.

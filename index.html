@@ -134,7 +134,9 @@ details.svgcode { margin: .2em 0 .7em; } details.svgcode summary { cursor: point
 .tool { background: none; border: 1px solid transparent; border-radius: 999px; padding: 2px 10px; font-size: 13px; color: var(--muted); }
 .tool:hover { border-color: var(--line); color: var(--ink); background: var(--panel); }
 .plain.sm { padding: 3px 12px; font-size: 13.5px; border-radius: 999px; }
-.offs { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.offs { font-size: 12.5px; color: var(--muted); margin-top: 6px; } .offs .try { font-size: inherit; }
+.toldMore { margin-top: 8px; } .toldMore summary { cursor: pointer; color: var(--muted); font-size: 14px; } .toldMore pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; background: var(--code); border-radius: 10px; padding: 10px; margin: 6px 0 0; }
+.toldState { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; font-size: 13.5px; color: var(--muted); }
 .nudge { margin-top: 10px; background: var(--accent-soft); border-radius: 12px; padding: 8px 12px; font-size: 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .nudge span { flex: 1; min-width: 200px; }
 .cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 12px; }
@@ -247,12 +249,26 @@ const db = {
 };
 const settings = Object.assign({ provider: 'wikipedia', keys: {}, recall: 'both', reader: true, smallWindow: false }, load('nanochat.settings', {}));
 const saveSettings = () => store('nanochat.settings', settings);
+// What the “Instructions” part tells Nano before the first message. These are the page's own words. Each piece can be
+// rewritten in Settings, and settings.told then holds only the pieces that were changed. {date} stands for today's date.
+const TOLD = {
+  briefing: `You are a friendly, helpful assistant called Nano. You run entirely on the user's own computer, inside Chrome, as the small on-device model Gemini Nano.
+Keep answers clear and fairly short. You may use Markdown.
+You are a small model, so be honest: when you are not sure, say so instead of guessing, and never make up sources, links or quotations.`,
+  calculator: `You are unreliable at arithmetic. State a calculated number only when it has been given to you; otherwise say what would need working out.`,
+  date: `For reference, today's date is {date}.`,
+  tools: `Sometimes a message arrives together with facts the app has looked up for you (a calculation, search results, a note, part of a document). Trust those over your own memory and copy numbers from them exactly. You cannot look anything up yourself, so never write out calculator output or search results of your own.`,
+};
+settings.told = settings.told && typeof settings.told === 'object' ? settings.told : {};
+const told = k => typeof settings.told[k] === 'string' ? settings.told[k] : TOLD[k];
+const toldEdited = () => Object.keys(TOLD).some(k => typeof settings.told[k] === 'string');
+function setTold(k, text) { if (text == null || text === TOLD[k]) delete settings.told[k]; else settings.told[k] = text; saveSettings(); engine.dirty = true; if (!state.busy) ui.meter(); }
 
 // ───────────────────────────── the parts ─────────────────────────────
 // Gemini Nano by itself only continues a conversation. Everything else is a part the page adds around it, and
 // each part has a switch: take one away to see what it was doing, or start with none and build the chatbot up.
 const FEATURES = [
-  { k: 'instructions', g: 'What Nano is told', name: 'Instructions', on: 'Nano gets a short briefing: its name, to keep answers short, and to say so when it is unsure.', off: 'Nano gets no briefing at all, only your messages.', probe: 'Who are you, and where are you running?' },
+  { k: 'instructions', g: 'What Nano is told', name: 'Instructions', on: 'Nano gets a short briefing: its name, to keep answers short, and to say so when it is unsure. The briefing can be read and rewritten in Settings.', off: 'Nano gets no briefing at all, only your messages.', probe: 'Who are you, and where are you running?' },
   { k: 'date', name: 'Today’s date', on: 'The page tells Nano what day it is.', off: 'Nano has no clock, so it can only guess the date.', probe: 'What is the date today?' },
   { k: 'notes', name: 'Notes', on: 'Nano sees your saved notes and can save new ones, so facts carry over from chat to chat.', off: 'Nothing carries over from one chat to the next.', probe: 'Remember that my bike lock code is 4821' },
   { k: 'contents', g: 'Memory', name: 'Contents list', on: 'When a conversation outgrows Nano’s memory, the older messages are summarized into a contents list that Nano keeps reading.', off: 'When Nano’s memory is full, the oldest messages simply fall out of its view.' },
@@ -602,13 +618,10 @@ function contentsForPrompt(chat) {
 function systemPrompt(chat, F = settings.features) {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const tools = F.calculator || F.search || F.links || F.documents || F.notes || F.recall, parts = [];
-  if (F.instructions) parts.push(`You are a friendly, helpful assistant called Nano. You run entirely on the user's own computer, inside Chrome, as the small on-device model Gemini Nano.
-Keep answers clear and fairly short. You may use Markdown.
-You are a small model, so be honest: when you are not sure, say so instead of guessing, and never make up sources, links or quotations.` +
-    (F.calculator ? `\nYou are unreliable at arithmetic. State a calculated number only when it has been given to you; otherwise say what would need working out.` : '') +
-    (F.date ? `\nFor reference, today's date is ${today}.` : '') +
-    (tools ? `\nSometimes a message arrives together with facts the app has looked up for you (a calculation, search results, a note, part of a document). Trust those over your own memory and copy numbers from them exactly. You cannot look anything up yourself, so never write out calculator output or search results of your own.` : ''));
-  else if (F.date) parts.push(`Today's date is ${today}.`);
+  if (F.instructions) {                  // the briefing, and a line for each kind of part that needs explaining to Nano (see TOLD)
+    const said = [told('briefing'), F.calculator ? told('calculator') : '', F.date ? told('date').replace(/\{date\}/g, today) : '', tools ? told('tools') : ''].map(s => s.trim()).filter(Boolean).join('\n');
+    if (said) parts.push(said);
+  } else if (F.date) parts.push(`Today's date is ${today}.`);
   if (F.notes) {
     const n = notesForPrompt();
     if (n.inlined.length) parts.push(`The user's saved notes (things they asked you to remember):\n` + n.inlined.map(x => `- ${x.title}: ${x.body}`).join('\n'));
@@ -1007,6 +1020,7 @@ async function send(text, atts = []) {
 // Returns true when the exchange went straight into the conversation's own session.
 async function runTurn(chat, user, bot, idx, signal, ctx) {
   const F = ctx.F; bot.f = { ...F }; if (alt) bot.model = alt.info.name;
+  if (F.instructions && toldEdited()) bot.told = { ...settings.told };          // the learner's own instructions were in use: keep them with the reply
   await gather(chat, user, bot, idx, signal, ctx);
   if (bot.direct) { bot.text = bot.direct; bot.byPage = true; return false; }          // the page answered by itself: a plain sum, or a saved note
   const ev = bot.steps.filter(s => s.evidence).map(s => s.evidence).join('\n\n');
@@ -1119,7 +1133,7 @@ function coachPrompt(chat, bot) {
 
 THE PARTS (key, name, whether it was on for this reply, and what it does when on)
 ${FEATURES.map(p => `- ${p.k}: ${p.name}: ${f[p.k] ? 'ON' : 'OFF'}. ${p.on}`).join('\n')}
-${viewFrom(chat) > 0 ? `\nThe conversation has outgrown the model's memory: it sees only the last ${Math.max(0, i - 1 - viewFrom(chat))} messages before this one word for word${f.contents && chat.segments.length ? ', plus a contents list of the older part' : ''}.\n` : ''}
+${[bot, ...tries].map((a, k) => a.told ? `\nTHE LEARNER REWROTE THE INSTRUCTIONS the page gives the model${tries.length ? ` (in use for answer ${k + 1})` : ''}. In place of the page's usual words, the model was told:\n${clip(Object.entries(a.told).map(([key, text]) => `[${key === 'briefing' ? 'the briefing' : 'the line about ' + key}] ${text.trim() || '(nothing)'}`).join('\n'), 2500)}\nIf the reply came out the way it did because of these words, say so.\n` : '').join('')}${viewFrom(chat) > 0 ? `\nThe conversation has outgrown the model's memory: it sees only the last ${Math.max(0, i - 1 - viewFrom(chat))} messages before this one word for word${f.contents && chat.segments.length ? ', plus a contents list of the older part' : ''}.\n` : ''}
 THE CONVERSATION JUST BEFORE
 ${before || '(this was the first message)'}
 
@@ -1423,6 +1437,7 @@ function botNode(t, i) {
     kids.push(replyParts(t));
     if (done && partsOn(f) < CORE.length) kids.push(el('div', { class: 'offs' }, 'For this reply: ' + partsLabel(f) + '.'));
   }
+  if (done && [t, ...(t.variants || [])].some(x => x.told)) kids.push(el('div', { class: 'offs told' }, t.told ? 'Nano had your own instructions for this reply, not the page’s. ' : 'Some of these answers had your own instructions, not the page’s. ', el('button', { class: 'try', onclick: showSettings }, 'See them in Settings')));
   if (done) {
     const nd = nudgeFor(chat, i);
     if (nd) kids.push(el('div', { class: 'nudge' }, el('span', null, el('b', null, `💡 “${PART[nd.k].name}” is off. `), PART[nd.k].off),
@@ -1529,7 +1544,8 @@ function showMemory() {
         (F.recall ? ' It can look back into the earlier messages when you ask.' : ' “Looking back” is switched off, so it cannot reread them.') + ' The whole conversation stays saved in this browser.'
       : `Nano sees all ${verbatim} messages of this conversation word for word. When the conversation outgrows the space, ` + (F.contents ? 'older parts are summarized into a contents list, and nothing is deleted.' : 'the oldest messages will fall out of its view, because the contents list is switched off. They stay saved in this browser.')),
     W < engine.realW ? el('p', { class: 'sub' }, `This page is pretending Nano's memory is ${W.toLocaleString('en-US')} tokens (really ${engine.realW.toLocaleString('en-US')}), so that the memory parts can be seen at work.`) : null,
-    el('details', null, el('summary', null, 'Show the exact instructions Nano was given'), el('pre', null, sysText || '(Nothing. Every part that tells Nano something is switched off, so it gets only the messages.)')));
+    el('details', null, el('summary', null, 'Show the exact instructions Nano was given'), el('pre', null, sysText || '(Nothing. Every part that tells Nano something is switched off, so it gets only the messages.)'),
+      el('p', { class: 'sub' }, toldEdited() ? 'Some of these words are your own. ' : 'These words are the page’s, not Nano’s. ', el('button', { class: 'try', onclick: showSettings }, 'Rewrite them in Settings'))));
 }
 function showContents() {
   const chat = state.chat;
@@ -1636,8 +1652,32 @@ function showSettings() {
         el('select', { id: 'rateSel', style: 'width:auto', onchange: e => { vo.rate = +e.target.value; saveVoice(); } }, [[.8, 'Slower'], [1, 'Normal speed'], [1.25, 'Faster'], [1.5, 'Fastest']].map(([v, t]) => el('option', { value: v, selected: +vo.rate === v }, t))),
         el('button', { class: 'plain', onclick: () => speak({ id: 'sample', text: 'Hello! This is how I sound when I read a reply to you.' }) }, 'Hear it')),
       el('p', { class: 'sub', style: 'margin-top:6px' }, 'Voices marked “online” send the words of the reply to their maker to be spoken. The others speak on this computer.')] : null];
+  // What Nano is told: the page's own instructions, which the learner can read and rewrite.
+  const toldPre = el('pre'), toldState = el('div', { class: 'toldState' }), toldBoxes = {};
+  const drawTold = () => {
+    const sys = systemPrompt(state.chat);
+    toldPre.textContent = sys || '(Nothing. Every part that tells Nano something is switched off, so it gets only the messages.)';
+    toldState.textContent = '';
+    toldState.append(toldEdited() ? 'Your own words are in use, from the next message on.' : 'These are the page’s own words.',
+      toldEdited() ? el('button', { class: 'plain', id: 'toldReset', onclick: () => { for (const k of Object.keys(TOLD)) { setTold(k, null); toldBoxes[k].value = TOLD[k]; } drawTold(); } }, 'Back to the page’s words') : '');
+  };
+  const toldBox = (k, id, rows) => (toldBoxes[k] = el('textarea', { id, rows, value: told(k), oninput: e => { setTold(k, e.target.value); drawTold(); } }));
+  const toldSection = [
+    el('label', { for: 'toldBriefing' }, 'What Nano is told'),
+    el('p', { class: 'sub' }, 'Before your first message, the page gives Nano these instructions. Nano did not write them and cannot change them, but you can. Rewrite them and see how the replies change.'),
+    settings.features.instructions ? null : el('p', { class: 'sub', style: 'color:var(--warn)' }, 'The “Instructions” part is switched off, so at the moment Nano is told none of this.'),
+    toldBox('briefing', 'toldBriefing', 6), toldState,
+    el('details', { class: 'toldMore' }, el('summary', null, 'Lines that other parts add'),
+      el('p', { class: 'sub' }, 'When these parts are on, the page adds a line about each to the instructions.'),
+      el('label', { for: 'toldCalculator' }, 'When “Calculator” is on'), toldBox('calculator', 'toldCalculator', 3),
+      el('label', { for: 'toldDate' }, 'When “Today’s date” is on'), toldBox('date', 'toldDate', 2), el('p', { class: 'sub', style: 'margin-top:4px' }, 'The page puts today’s date where it says {date}.'),
+      el('label', { for: 'toldTools' }, 'When any part that looks things up is on'), toldBox('tools', 'toldTools', 4)),
+    el('details', { class: 'toldMore' }, el('summary', null, 'Everything Nano is given now, word for word'), toldPre,
+      el('p', { class: 'sub', style: 'margin-top:6px' }, 'Your notes and the contents list of a long conversation are added after the instructions. The page also gives short instructions of its own to the helpers that choose a tool and write summaries; those are not shown here.'))];
+  drawTold();
   dialog('Settings',
-    el('label', null, 'Where searches go'),
+    toldSection,
+    el('label', { style: 'margin-top:18px' }, 'Where searches go'),
     radio('wikipedia', 'Wikipedia', 'No key needed. Good for facts; no news.'), radio('tavily', 'The whole web, with a Tavily key', 'A search service made for AI assistants.'), radio('serper', 'The whole web, with a Serper key', 'Google results.'),
     el('label', { class: 'radio' }, el('input', { type: 'radio', name: 'prov', id: 'provAi', checked: settings.provider === 'ai', disabled: !aiSearchReady(), onchange: () => { settings.provider = 'ai'; saveSettings(); drawKey(); } }),
       el('span', null, aiSearchReady() ? `The whole web, through ${coachName()}` : 'The whole web, through the AI whose key you give below', el('small', null, aiSearchReady() ? `Uses the ${coachName()} key from the coach settings below. It searches and reports what the pages say, and Nano writes the answer. Each search is charged to that key.` : 'Give a Claude, Gemini or ChatGPT key under Coach, further down, to use this.'))), keyBox,
@@ -1810,7 +1850,7 @@ async function start(byClick) {
   if (last) { state.chat = last; ui.chats(); ui.thread(); ui.title(); } else newChat();
   start(false);
 })();
-window.NC = { state, engine, settings, B, get alt() { return alt; }, start, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
+window.NC = { state, engine, settings, B, get alt() { return alt; }, start, TOLD, told, setTold, toldEdited, send, calc, md, rank, passages, get notes() { return notes; }, set notes(v) { notes = v; saveNotes(); }, compact, recall, decide, systemPrompt, ui,
   FEATURES, setPart, setParts, defaultParts, partsLabel, partsDiff, rerun, viewFrom, nudgeFor, startCoach, coachSay, askCoach, askAI, aiSearch, coachPrompt, parseLoose, showParts, showRerun, showSettings, newChat, keepAnswer, coachTries, saveChat, cleanSvg, speak, speakable, stopSpeaking, micToggle, tts, mic };
 </script>
 </body>
