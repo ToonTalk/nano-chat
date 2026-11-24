@@ -253,6 +253,12 @@ const clip = (s, chars) => s.length <= chars ? s : s.slice(0, Math.round(chars *
 const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
 const params = new URLSearchParams(location.search);
 const SIM_WINDOW = +params.get('window') || 0;    // ?window=1500 pretends Nano's memory is smaller, to watch summarizing happen
+// Which browser's built-in model this is. Chrome runs Google's Gemini Nano; Microsoft Edge runs its own model, Aion Instruct,
+// behind the same Prompt API. Only the names come from the browser: what the model can take (pictures, sound, how much
+// memory) is asked of the model itself, so a browser that adds something later gets it without a change here.
+const EDGE = /\bEdg\//.test(navigator.userAgent);
+const NANO = EDGE ? 'Aion' : 'Nano', MODEL = EDGE ? 'Aion Instruct' : 'Gemini Nano', BROWSER = EDGE ? 'Edge' : 'Chrome', MAKER = EDGE ? 'Microsoft' : 'Google';
+$('#meter').title = `What ${NANO} can see right now`; $('#hint').textContent = `Runs on this computer with ${MODEL}. It is a small model and can be wrong.`;
 
 // ───────────────────────────── storage ─────────────────────────────
 const db = {
@@ -287,7 +293,7 @@ const saveSettings = () => {
 // What the “Instructions” part tells Nano before the first message. These are the page's own words. Each piece can be
 // rewritten in Settings, and settings.told then holds only the pieces that were changed. {date} stands for today's date.
 const TOLD = {
-  briefing: `You are a friendly, helpful assistant called Nano. You run entirely on the user's own computer, inside Chrome, as the small on-device model Gemini Nano.
+  briefing: `You are a friendly, helpful assistant called ${NANO}. You run entirely on the user's own computer, inside ${BROWSER}, as the small on-device model ${MODEL}.
 Keep answers clear and fairly short. You may use Markdown.
 You are a small model, so be honest: when you are not sure, say so instead of guessing, and never make up sources, links or quotations.`,
   calculator: `You are unreliable at arithmetic. State a calculated number only when it has been given to you; otherwise say what would need working out.`,
@@ -304,39 +310,39 @@ function setTold(k, text) { if (text == null || text === TOLD[k]) delete setting
 // Gemini Nano by itself only continues a conversation. Everything else is a part the page adds around it, and
 // each part has a switch: take one away to see what it was doing, or start with none and build the chatbot up.
 const FEATURES = [
-  { k: 'instructions', g: 'What Nano is told', name: 'Instructions', on: 'Nano gets a short briefing: its name, to keep answers short, and to say so when it is unsure. The briefing can be read and rewritten in Settings.', off: 'Nano gets no briefing at all, only your messages.', probe: 'Who are you, and where are you running?' },
-  { k: 'date', name: 'Today’s date', on: 'The page tells Nano what day it is.', off: 'Nano has no clock, so it can only guess the date.', probe: 'What is the date today?' },
-  { k: 'notes', name: 'Notes', on: 'Nano sees your saved notes and can save new ones, so facts carry over from chat to chat.', off: 'Nothing carries over from one chat to the next.', probe: 'Remember that my bike lock code is 4821' },
-  { k: 'contents', g: 'Memory', name: 'Contents list', on: 'When a conversation outgrows Nano’s memory, the older messages are summarized into a contents list that Nano keeps reading.', off: 'When Nano’s memory is full, the oldest messages simply fall out of its view.' },
-  { k: 'recall', name: 'Looking back', on: 'When you ask about something from early in a long conversation, the page finds those old messages and shows them to Nano again.', off: 'Once old messages no longer fit in Nano’s memory, Nano cannot go back and read them.' },
-  { k: 'calculator', g: 'Tools', name: 'Calculator', on: 'Sums and date math are done by a real calculator in the page.', off: 'Nano does arithmetic in its head.', probe: 'What is 17.5% of 83,946.20?' },
-  { k: 'search', name: 'Web search', on: 'Facts are looked up, and the answer says where they came from.', off: 'Nano answers from whatever it remembers from its training.', probe: 'How long is the Forth Bridge in Scotland, and when did it open?' },
-  { k: 'links', name: 'Reading links', on: 'A link in your message is fetched and read.', off: 'Nano sees only the address and has to guess what is there.', probe: 'What is this page about? https://en.wikipedia.org/?curid=376094' },
-  { k: 'documents', name: 'Long texts', on: 'A long paste or an attached file is searched for the parts that matter, or read in pieces.', off: 'The text is put into your message as it is, and cut off where Nano’s memory ends.' },
-  { k: 'media', name: 'Pictures and sound', on: 'Nano sees the pictures and hears the recordings you attach, photograph or record.', off: 'Nano is told only that a picture or a recording was attached.' },
-  { k: 'nudges', g: 'Finishing touches', name: 'Rules of thumb', on: 'Simple rules in the page help choose a tool: a plain sum goes straight to the calculator, a greeting needs no tool, and hints point at the likely tool.', off: 'Nano alone decides which tool each message needs.' },
-  { k: 'guard', name: 'Made-up results guard', on: 'If Nano starts writing pretend search or calculator results, the reply is cut there. Citations that point at nothing are removed.', off: 'You see whatever Nano writes.' },
-  { k: 'markdown', name: 'Formatting', on: 'Markdown is shown as headings, lists, tables and bold text, and SVG code is drawn as a picture.', off: 'You see the raw characters Nano writes.', probe: 'Make a small table of three planets and how many moons each has.' },
-  { k: 'titles', name: 'Chat titles', on: 'Nano gives each chat a title.', off: 'A chat is named by its first few words.' },
-  { k: 'selfcheck', g: 'Extra', extra: true, name: 'Second look', on: 'After each answer a second copy of Nano checks it and says whether it sees a problem. Slower.', off: 'Answers are not checked by Nano.' },
+  { k: 'instructions', g: ('What ' + NANO + ' is told'), name: 'Instructions', on: (NANO + ' gets a short briefing: its name, to keep answers short, and to say so when it is unsure. The briefing can be read and rewritten in Settings.'), off: (NANO + ' gets no briefing at all, only your messages.'), probe: 'Who are you, and where are you running?' },
+  { k: 'date', name: 'Today’s date', on: ('The page tells ' + NANO + ' what day it is.'), off: (NANO + ' has no clock, so it can only guess the date.'), probe: 'What is the date today?' },
+  { k: 'notes', name: 'Notes', on: (NANO + ' sees your saved notes and can save new ones, so facts carry over from chat to chat.'), off: 'Nothing carries over from one chat to the next.', probe: 'Remember that my bike lock code is 4821' },
+  { k: 'contents', g: 'Memory', name: 'Contents list', on: ('When a conversation outgrows ' + NANO + '’s memory, the older messages are summarized into a contents list that ' + NANO + ' keeps reading.'), off: ('When ' + NANO + '’s memory is full, the oldest messages simply fall out of its view.') },
+  { k: 'recall', name: 'Looking back', on: ('When you ask about something from early in a long conversation, the page finds those old messages and shows them to ' + NANO + ' again.'), off: ('Once old messages no longer fit in ' + NANO + '’s memory, ' + NANO + ' cannot go back and read them.') },
+  { k: 'calculator', g: 'Tools', name: 'Calculator', on: 'Sums and date math are done by a real calculator in the page.', off: (NANO + ' does arithmetic in its head.'), probe: 'What is 17.5% of 83,946.20?' },
+  { k: 'search', name: 'Web search', on: 'Facts are looked up, and the answer says where they came from.', off: (NANO + ' answers from whatever it remembers from its training.'), probe: 'How long is the Forth Bridge in Scotland, and when did it open?' },
+  { k: 'links', name: 'Reading links', on: 'A link in your message is fetched and read.', off: (NANO + ' sees only the address and has to guess what is there.'), probe: 'What is this page about? https://en.wikipedia.org/?curid=376094' },
+  { k: 'documents', name: 'Long texts', on: 'A long paste or an attached file is searched for the parts that matter, or read in pieces.', off: ('The text is put into your message as it is, and cut off where ' + NANO + '’s memory ends.') },
+  { k: 'media', name: 'Pictures and sound', on: (NANO + ' sees the pictures and hears the recordings you attach, photograph or record.'), off: (NANO + ' is told only that a picture or a recording was attached.') },
+  { k: 'nudges', g: 'Finishing touches', name: 'Rules of thumb', on: 'Simple rules in the page help choose a tool: a plain sum goes straight to the calculator, a greeting needs no tool, and hints point at the likely tool.', off: (NANO + ' alone decides which tool each message needs.') },
+  { k: 'guard', name: 'Made-up results guard', on: ('If ' + NANO + ' starts writing pretend search or calculator results, the reply is cut there. Citations that point at nothing are removed.'), off: ('You see whatever ' + NANO + ' writes.') },
+  { k: 'markdown', name: 'Formatting', on: 'Markdown is shown as headings, lists, tables and bold text, and SVG code is drawn as a picture.', off: ('You see the raw characters ' + NANO + ' writes.'), probe: 'Make a small table of three planets and how many moons each has.' },
+  { k: 'titles', name: 'Chat titles', on: (NANO + ' gives each chat a title.'), off: 'A chat is named by its first few words.' },
+  { k: 'selfcheck', g: 'Extra', extra: true, name: 'Second look', on: ('After each answer a second copy of ' + NANO + ' checks it and says whether it sees a problem. Slower.'), off: ('Answers are not checked by ' + NANO + '.') },
 ];
 // The longer explanation of each part, shown when “More about this” is opened in the parts panel.
 const MORE = {
-  instructions: 'A language model does not know who it is or how to behave until it is told. Before your first message the page gives Nano a short briefing: that it is an assistant, to keep answers short, and to say so when it is unsure. You never see the briefing in the chat, but you can read it, and rewrite it, in Settings.',
-  date: 'A model is trained once, on text collected up to some date, and then never changes. It has no clock. With this part on, the page writes today’s date into the briefing, and Nano reads it there.',
-  notes: 'Nano does not remember one chat in the next: every chat starts blank. Notes are the page’s way round that. When you say “remember that…”, the page saves a note in this browser, and at the start of every chat it shows Nano your notes.',
-  contents: 'Nano can read only so much at once. That is its memory, and the Memory bar at the top shows it filling up. In a long conversation the oldest messages no longer fit. With this part on, the page first has Nano write a short summary of them (a title, the topics and the gist), like an entry in a table of contents. From then on Nano reads that list in place of the old messages. Nothing is deleted: you can still scroll up and read everything.',
-  recall: 'In a long conversation the oldest messages drop out of what Nano can read. They stay saved in this browser, and you can still scroll up to them, but Nano cannot. Say you gave the name of your hotel early on and ask about it much later. With this part on, the page notices that you are asking about something from earlier, finds those old messages, and hands their exact words to Nano together with your question. With it off, Nano has only the recent messages and the contents list, so it guesses or says it does not know. Settings has a choice of how the old messages are found.',
-  calculator: 'A language model does not calculate. It writes the digits that look most likely, which is why its sums can come out nearly right. With this part on, the page spots the arithmetic, works it out with an ordinary calculator program, and gives Nano the result to put into words. It handles dates too, such as how many days there are until a birthday.',
-  search: 'Nano knows only what was in its training text, and it cannot say where a fact came from. With this part on, the page searches for you (Wikipedia, unless you choose another service in Settings) and hands Nano what it found. The answer carries numbers like [1] that link to the sources. The small chip above the answer opens to show exactly what Nano was given.',
-  links: 'Nano cannot open a web page. Given a link, it sees only the address, and may describe a page it has never read. With this part on, the page fetches the link, takes the text out of it, and gives Nano the parts that matter.',
-  documents: 'A long paste or an attached file can be bigger than Nano’s whole memory. With this part on, the page cuts the text into pieces. For a question, it finds the pieces that share words with your question and shows Nano only those. For a summary, Nano summarizes each piece and then the summaries. With it off, the text goes in as it is and is cut off where the memory ends.',
-  media: 'Gemini Nano was trained on pictures and sound as well as text. The paperclip lets you attach a picture or a sound file, take a photo, or record with the microphone. With this part on, the page hands them to Nano beside your words. A picture takes about as much of Nano’s memory as two hundred words, whatever its size, and a minute of sound about four hundred. After it replies, Nano is asked once more, separately, to put into words what the picture or recording holds, and you can read that under it. On some computers Chrome lets Nano take only text, and then the paperclip offers files alone.',
-  nudges: 'Choosing a tool is itself a question put to Nano: which tool does this message need? A small model often chooses badly. With this part on, ordinary rules written by a programmer help. A message that is only a sum goes straight to the calculator, “hello” needs no tool, and a link or the word “remember” points to the likely tool. With it off, Nano chooses by itself.',
+  instructions: ('A language model does not know who it is or how to behave until it is told. Before your first message the page gives ' + NANO + ' a short briefing: that it is an assistant, to keep answers short, and to say so when it is unsure. You never see the briefing in the chat, but you can read it, and rewrite it, in Settings.'),
+  date: ('A model is trained once, on text collected up to some date, and then never changes. It has no clock. With this part on, the page writes today’s date into the briefing, and ' + NANO + ' reads it there.'),
+  notes: (NANO + ' does not remember one chat in the next: every chat starts blank. Notes are the page’s way round that. When you say “remember that…”, the page saves a note in this browser, and at the start of every chat it shows ' + NANO + ' your notes.'),
+  contents: (NANO + ' can read only so much at once. That is its memory, and the Memory bar at the top shows it filling up. In a long conversation the oldest messages no longer fit. With this part on, the page first has ' + NANO + ' write a short summary of them (a title, the topics and the gist), like an entry in a table of contents. From then on ' + NANO + ' reads that list in place of the old messages. Nothing is deleted: you can still scroll up and read everything.'),
+  recall: ('In a long conversation the oldest messages drop out of what ' + NANO + ' can read. They stay saved in this browser, and you can still scroll up to them, but ' + NANO + ' cannot. Say you gave the name of your hotel early on and ask about it much later. With this part on, the page notices that you are asking about something from earlier, finds those old messages, and hands their exact words to ' + NANO + ' together with your question. With it off, ' + NANO + ' has only the recent messages and the contents list, so it guesses or says it does not know. Settings has a choice of how the old messages are found.'),
+  calculator: ('A language model does not calculate. It writes the digits that look most likely, which is why its sums can come out nearly right. With this part on, the page spots the arithmetic, works it out with an ordinary calculator program, and gives ' + NANO + ' the result to put into words. It handles dates too, such as how many days there are until a birthday.'),
+  search: (NANO + ' knows only what was in its training text, and it cannot say where a fact came from. With this part on, the page searches for you (Wikipedia, unless you choose another service in Settings) and hands ' + NANO + ' what it found. The answer carries numbers like [1] that link to the sources. The small chip above the answer opens to show exactly what ' + NANO + ' was given.'),
+  links: (NANO + ' cannot open a web page. Given a link, it sees only the address, and may describe a page it has never read. With this part on, the page fetches the link, takes the text out of it, and gives ' + NANO + ' the parts that matter.'),
+  documents: ('A long paste or an attached file can be bigger than ' + NANO + '’s whole memory. With this part on, the page cuts the text into pieces. For a question, it finds the pieces that share words with your question and shows ' + NANO + ' only those. For a summary, ' + NANO + ' summarizes each piece and then the summaries. With it off, the text goes in as it is and is cut off where the memory ends.'),
+  media: (EDGE ? 'Some small models are trained on pictures and sound as well as text: Gemini Nano in Chrome is one. ' : MODEL + ' was trained on pictures and sound as well as text. ') + ('The paperclip lets you attach a picture or a sound file, take a photo, or record with the microphone. With this part on, the page hands them to ' + NANO + ' beside your words. A picture takes about as much of ' + NANO + '’s memory as two hundred words, whatever its size, and a minute of sound about four hundred. After it replies, ' + NANO + ' is asked once more, separately, to put into words what the picture or recording holds, and you can read that under it. On some computers ' + BROWSER + ' lets ' + NANO + ' take only text, and then the paperclip offers files alone. The page asks the model each time it starts, so if a later ' + BROWSER + ' hands it pictures and sound, they work here without any change.'),
+  nudges: ('Choosing a tool is itself a question put to ' + NANO + ': which tool does this message need? A small model often chooses badly. With this part on, ordinary rules written by a programmer help. A message that is only a sum goes straight to the calculator, “hello” needs no tool, and a link or the word “remember” points to the likely tool. With it off, ' + NANO + ' chooses by itself.'),
   guard: 'Once it has seen what tools return, a small model sometimes writes results of its own: a pretend search result or calculation that no tool produced. With this part on, the page watches the reply as it is written and cuts it off where that begins. It also removes source numbers that point at no source.',
-  markdown: 'Models write in Markdown: plain characters that stand for formatting, such as two stars around a word for bold, and bars for the columns of a table. With this part on, the page turns them into real headings, lists and tables, and draws SVG code as a picture. With it off, you see exactly the characters Nano wrote.',
-  titles: 'After the first reply the page asks Nano, in a separate request, for a title of a few words, and uses it in the list of chats. With this part off, a chat is named by the first words of your message.',
-  selfcheck: 'After each answer the page starts a second, fresh copy of Nano, shows it your message and the answer, and asks whether anything is wrong. Its verdict appears under the reply. It is the same small model checking its own kind of work, so it misses a good deal, and every reply takes longer.',
+  markdown: ('Models write in Markdown: plain characters that stand for formatting, such as two stars around a word for bold, and bars for the columns of a table. With this part on, the page turns them into real headings, lists and tables, and draws SVG code as a picture. With it off, you see exactly the characters ' + NANO + ' wrote.'),
+  titles: ('After the first reply the page asks ' + NANO + ', in a separate request, for a title of a few words, and uses it in the list of chats. With this part off, a chat is named by the first words of your message.'),
+  selfcheck: ('After each answer the page starts a second, fresh copy of ' + NANO + ', shows it your message and the answer, and asks whether anything is wrong. Its verdict appears under the reply. It is the same small model checking its own kind of work, so it misses a good deal, and every reply takes longer.'),
 };
 const PART = Object.fromEntries(FEATURES.map(f => [f.k, f])), CORE = FEATURES.filter(f => !f.extra);
 const defaultParts = on => Object.fromEntries(FEATURES.map(f => [f.k, f.extra ? false : on]));
@@ -351,7 +357,7 @@ function setParts(F) { settings.features = Object.assign(defaultParts(true), F);
 function partsLabel(F) {
   F = F || defaultParts(true);
   const off = CORE.filter(f => !F[f.k]), on = CORE.filter(f => F[f.k]), extra = FEATURES.filter(f => f.extra && F[f.k]).map(f => f.name);
-  const s = !off.length ? 'every part on' : !on.length ? 'bare Nano, every part off' : off.length <= on.length ? 'off: ' + off.map(f => f.name).join(', ') : 'only on: ' + on.map(f => f.name).join(', ');
+  const s = !off.length ? 'every part on' : !on.length ? ('bare ' + NANO + ', every part off') : off.length <= on.length ? 'off: ' + off.map(f => f.name).join(', ') : 'only on: ' + on.map(f => f.name).join(', ');
   return s + (extra.length ? '; with ' + extra.join(', ') : '');
 }
 function partsDiff(a, b) {            // what b changes compared with a
@@ -609,6 +615,9 @@ const engine = {
     this.router = await LM.create({ ...LM_OPTS, initialPrompts: [{ role: 'system', content: ROUTER_SYS }] });
     this.realW = this.side.contextWindow || this.side.inputQuota || 9216;
     try { this.media = (await LM.availability(LM_MEDIA)) === 'available'; } catch { this.media = false; }
+    // A browser can say pictures and sound are on offer and then refuse a session that takes them (Edge 158 does), so the page
+    // also opens one, in the background, and keeps them only if that works.
+    if (this.media) this.mediaChecked = LM.create({ ...LM_MEDIA, initialPrompts: [{ role: 'system', content: SIDE_SYS }] }).then(s => { s.destroy(); }, e => { console.warn('pictures and sound refused:', e.message); this.media = false; });
     this.ready = true;
   },
   // One question to a throwaway copy of a base session: it gets a full, clean memory and leaves no trace.
@@ -722,7 +731,7 @@ async function buildMain(chat, upto) {
   if (engine.main) { try { engine.main.destroy(); } catch {} engine.main = null; }
   const { s, sys, media } = await makeSession(chat, upto, settings.features, viewFrom(chat));
   engine.main = s; engine.mainMedia = media;
-  engine.main.addEventListener('contextoverflow', () => { console.warn('Nano dropped old messages by itself'); engine.dirty = true; });
+  engine.main.addEventListener('contextoverflow', () => { console.warn((NANO + ' dropped old messages by itself')); engine.dirty = true; });
   engine.lastSystem = sys; engine.dirty = false; engine.builtFor = chat.id;
 }
 // How many tokens the session would hold if it started at message `from`.
@@ -902,7 +911,7 @@ async function recall(chat, query, step, signal, F = settings.features) {
     else ranked = items.map(it => ({ it, score: (score.get(it) || 0) * (inSeg(it) ? 1.5 : 1) + (inSeg(it) ? top * .5 : 0) })).filter(x => x.score > 0);
     ranked.sort((a, b) => b.score - a.score);
   }
-  step.how = `mode: ${mode}` + (picked.length ? `; Nano pointed at contents ${picked.map(k => `entry ${k + 1}, “${chat.segments[k].title}”`).join(' and ')}` : mode !== 'keywords' ? '; Nano pointed at no contents entry' : '');
+  step.how = `mode: ${mode}` + (picked.length ? `; ${NANO} pointed at contents ${picked.map(k => `entry ${k + 1}, “${chat.segments[k].title}”`).join(' and ')}` : mode !== 'keywords' ? ('; ' + NANO + ' pointed at no contents entry') : '');
   const budget = B.evidence * CH * .9, cap = Math.min(1200, Math.floor(budget / 2.2)), out = []; let used = 0;
   for (const x of ranked.slice(0, 6)) { const t = clip(x.it.text, cap); if (used + t.length > budget) break; out.push({ i: x.it.i, t }); used += t.length; }
   out.sort((a, b) => a.i - b.i);
@@ -1119,7 +1128,7 @@ async function runTurn(chat, user, bot, idx, signal, ctx) {
   // Without the long-texts part an attachment is simply pasted into the message and cut off where Nano's memory ends.
   if (!F.documents && (user.atts || []).length) {
     const room = Math.max(300, (engine.W - B.reserve - est(systemPrompt(chat, F)) - est(prompt) - 60) * CH), all = user.atts.map(a => a.text).join('\n\n');
-    prompt += '\n\n' + all.slice(0, room); if (all.length > room) bot.note = `The attached text was cut off after ${Math.round(room).toLocaleString('en-US')} of its ${all.length.toLocaleString('en-US')} characters: that is all Nano's memory could take.`;
+    prompt += '\n\n' + all.slice(0, room); if (all.length > room) bot.note = `The attached text was cut off after ${Math.round(room).toLocaleString('en-US')} of its ${all.length.toLocaleString('en-US')} characters: that is all ${NANO}'s memory could take.`;
   }
   // Only when a picture is asked for is Nano told how to make one. (Told in its standing instructions, it offered pictures nobody wanted.)
   if (F.markdown && F.nudges && user.text && (/\b(draw|sketch|svg)\b/i.test(user.text) || (MAKES.test(user.text) && /\b(picture|drawing|image|logo|icon|illustration|diagram)\b/i.test(user.text)))) prompt += '\n\n(Write the picture as SVG code in a code block. The app will show it as a picture.)';
@@ -1141,7 +1150,7 @@ async function runTurn(chat, user, bot, idx, signal, ctx) {
     for await (const chunk of session.promptStreaming(input, { signal: inner.signal })) {
       bot.text += chunk; bot.phase = '';
       const fake = F.guard ? bot.text.search(FAKE_TOOL) : -1;          // Nano has started inventing tool output: stop it there
-      if (fake >= 0) { bot.text = bot.text.slice(0, fake); bot.note = 'Nano began to write made-up tool results, so the reply was cut off there.'; viaMain = false; if (!ctx.temp) engine.dirty = true; inner.abort(); break; }
+      if (fake >= 0) { bot.text = bot.text.slice(0, fake); bot.note = (NANO + ' began to write made-up tool results, so the reply was cut off there.'); viaMain = false; if (!ctx.temp) engine.dirty = true; inner.abort(); break; }
       ui.bot(bot.id, true);
     }
   } catch (e) { if (e.name !== 'AbortError' || signal.aborted) throw e; }
@@ -1205,7 +1214,7 @@ const coachModel = () => COACHES[settings.coach.provider].keyless && !(settings.
 const coachUrl = () => { const b = (settings.coach.url || '').trim().replace(/\/+$/, ''); return !b ? '' : /\/chat\/completions$/.test(b) ? b : b + '/chat/completions'; };
 const coachReady = () => settings.coach.mode !== 'off' && (COACHES[settings.coach.provider].keyless ? true : COACHES[settings.coach.provider].custom ? !!coachUrl() && !!coachModel() : !!coachKey());
 const coachName = () => COACHES[settings.coach.provider].custom ? host(coachUrl()) : COACHES[settings.coach.provider].name;
-const COACH_SYS = `You are the coach in Nano Chat, a teaching tool. A learner is chatting with Gemini Nano, a small language model that runs inside their browser. The page adds parts around the model (instructions, a calculator, web search, notes, a contents list for long conversations, and so on), and the learner can switch each part on or off to see what it contributes. Your job is to help the learner judge one reply from Nano and understand why it came out the way it did.
+const COACH_SYS = `You are the coach in Nano Chat, a teaching tool. A learner is chatting with ${MODEL}, a small language model that runs inside their browser. The page adds parts around the model (instructions, a calculator, web search, notes, a contents list for long conversations, and so on), and the learner can switch each part on or off to see what it contributes. Your job is to help the learner judge one reply from ${NANO} and understand why it came out the way it did.
 
 Check the reply carefully: its facts, its arithmetic, whether it answers what was asked, whether it invents anything, and whether it agrees with the material the page handed to the model. The model's own knowledge is old, and yours may be too for very recent events, so when you cannot verify something, say so and use the verdict "unsure" instead of guessing.
 
@@ -1231,18 +1240,18 @@ Then "verdict" is your verdict on ANSWER 1, and each problem also carries "n", t
 function coachPrompt(chat, bot) {
   const i = chat.turns.indexOf(bot), user = chat.turns[i - 1], f = bot.f || defaultParts(true), flat = s => (s || '').replace(/\s+\n/g, '\n').trim();
   const steps = a => (a.steps || []).map(s => `- ${s.tool} "${s.input}" (${s.status === 'ok' ? 'worked' : 'failed: ' + (s.error || '')})${s.how ? '; ' + s.how : ''}${s.evidence ? '\n' + clip(s.evidence, 3500) : ''}`).join('\n');
-  const before = chat.turns.slice(Math.max(0, i - 7), i - 1).map(t => `${t.role === 'user' ? 'Learner' : 'Nano'}: ${clip(flat(t.role === 'user' ? withMedia(t) : t.text), 700)}`).join('\n'), tries = coachTries(bot);
+  const before = chat.turns.slice(Math.max(0, i - 7), i - 1).map(t => `${t.role === 'user' ? 'Learner' : (NANO)}: ${clip(flat(t.role === 'user' ? withMedia(t) : t.text), 700)}`).join('\n'), tries = coachTries(bot);
   // Pictures and recordings from earlier messages that the model still has in front of it. Without this the coach was
   // told the model had been handed nothing, and took an answer about an earlier picture for something made up.
   const earlier = chat.turns.slice(Math.min(viewFrom(chat), i - 1), i - 1).flatMap(t => t.media || []), shown = coachImages(chat, bot).length;
   const earlierNote = !earlier.length ? '' : `\n\nPICTURES AND RECORDINGS FROM EARLIER IN THE CONVERSATION\n${earlier.map(m => `- a ${KIND[m.kind]}, “${m.name}”${m.desc ? `. What the model made of it, in a separate request, which may be wrong: “${clip(m.desc, 400)}”` : ''}`).join('\n')}\n${f.media ? 'The model still had these in front of it for this reply: each was given to it with the message it came with.' : 'The “Pictures and sound” part was off for this reply, so the model was only ever told that these were attached.'} ${shown ? 'The pictures among them are attached to this message, so you can look at them yourself.' : 'You cannot see or hear them.'}`;
   const about = a => (steps(a) || (earlier.length && f.media ? 'Nothing from a tool. The model answered from its own memory and from the conversation, which includes the pictures or recordings attached earlier (listed above).' : 'Nothing. The model answered from its own memory.')) + (a.byPage ? '\n(This reply was written by the page itself, not by the model.)' : '') + (a.note ? '\n(' + a.note + ')' : '');
-  const said = (a, max) => (clip(flat(a.text), max) || '(empty)') + (a.stopped ? '\n(The learner stopped it before it finished.)' : '') + (a.check ? `\n(Nano's own second look at this reply: ${a.check.ok ? 'it saw no problem.' : 'it saw a problem: ' + a.check.note})` : '');
+  const said = (a, max) => (clip(flat(a.text), max) || '(empty)') + (a.stopped ? '\n(The learner stopped it before it finished.)' : '') + (a.check ? `\n(${NANO}'s own second look at this reply: ${a.check.ok ? 'it saw no problem.' : 'it saw a problem: ' + a.check.note})` : '');
   return `Today's date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 
 THE PARTS (key, name, whether it was on for this reply, and what it does when on)
 ${FEATURES.map(p => `- ${p.k}: ${p.name}: ${f[p.k] ? 'ON' : 'OFF'}. ${p.on}`).join('\n')}
-${[bot, ...tries].some(a => a.model) ? `\nNOT GEMINI NANO THIS TIME: an earlier experiment put another model in Nano's place. ${[bot, ...tries].map((a, k) => `Answer ${k + 1} was written by ${a.model || 'Gemini Nano'}.`).join(' ')} Where this report says "Nano" or "the model", it means whichever model wrote that answer.\n` : ''}${[bot, ...tries].map((a, k) => a.told ? `\nTHE LEARNER REWROTE THE INSTRUCTIONS the page gives the model${tries.length ? ` (in use for answer ${k + 1})` : ''}. In place of the page's usual words, the model was told:\n${clip(Object.entries(a.told).map(([key, text]) => `[${key === 'briefing' ? 'the briefing' : 'the line about ' + key}] ${text.trim() || '(nothing)'}`).join('\n'), 2500)}\nIf the reply came out the way it did because of these words, say so.\n` : '').join('')}${viewFrom(chat) > 0 ? `\nThe conversation has outgrown the model's memory: it sees only the last ${Math.max(0, i - 1 - viewFrom(chat))} messages before this one word for word${f.contents && chat.segments.length ? ', plus a contents list of the older part' : ''}.\n` : ''}
+${[bot, ...tries].some(a => a.model) ? `\nNOT GEMINI NANO THIS TIME: an earlier experiment put another model in ${NANO}'s place. ${[bot, ...tries].map((a, k) => `Answer ${k + 1} was written by ${a.model || (MODEL)}.`).join(' ')} Where this report says "${NANO}" or "the model", it means whichever model wrote that answer.\n` : ''}${[bot, ...tries].map((a, k) => a.told ? `\nTHE LEARNER REWROTE THE INSTRUCTIONS the page gives the model${tries.length ? ` (in use for answer ${k + 1})` : ''}. In place of the page's usual words, the model was told:\n${clip(Object.entries(a.told).map(([key, text]) => `[${key === 'briefing' ? 'the briefing' : 'the line about ' + key}] ${text.trim() || '(nothing)'}`).join('\n'), 2500)}\nIf the reply came out the way it did because of these words, say so.\n` : '').join('')}${viewFrom(chat) > 0 ? `\nThe conversation has outgrown the model's memory: it sees only the last ${Math.max(0, i - 1 - viewFrom(chat))} messages before this one word for word${f.contents && chat.segments.length ? ', plus a contents list of the older part' : ''}.\n` : ''}
 THE CONVERSATION JUST BEFORE
 ${before || '(this was the first message)'}${earlierNote}
 
@@ -1397,7 +1406,7 @@ async function startCoach(chat, bot, again) {
 }
 // Talking with the coach about a reply. The coach gets what it was shown, its own review, and the conversation so far.
 // When the learner typed their own view before seeing the coach's, that view is the first thing said, and the coach answers it.
-const COACH_TALK = `You are the coach in Nano Chat, a teaching tool where a learner explores how a small on-device language model (Gemini Nano) becomes a chatbot once a page adds parts around it. Earlier you reviewed one of Nano's replies: the material you were shown and your review are above. Now the learner is talking with you about that reply.
+const COACH_TALK = `You are the coach in Nano Chat, a teaching tool where a learner explores how a small on-device language model (${MODEL}) becomes a chatbot once a page adds parts around it. Earlier you reviewed one of ${NANO}'s replies: the material you were shown and your review are above. Now the learner is talking with you about that reply.
 
 Answer in plain sentences, never JSON: two to four short sentences unless they ask for more. Answer what they actually said. Say what they have right, correct what they have wrong, and when it would help them see something for themselves, end with one question. If they show that your review was mistaken, say so plainly. Stay with this reply, the parts of the chatbot, and how small language models behave. Write for a curious learner, who may be a teenager.`;
 async function coachSay(chat, bot, text) {
@@ -1441,7 +1450,7 @@ async function nameChat(chat, user, bot) {
 const STEP_ICON = { calculator: '🧮', web_search: '🔎', save_note: '📒', read_note: '📒', recall: '🕘', read_page: '📄', document: '📎' };
 const ui = {
   hint(t) {
-    $('#hint').textContent = t || 'Runs on this computer with Gemini Nano. It is a small model and can be wrong.' +
+    $('#hint').textContent = t || ('Runs on this computer with ' + MODEL + '. It is a small model and can be wrong.') +
       (coachReady() ? ` Coach on: ${coachName()} is sent ${settings.coach.mode === 'every' ? 'every reply' : 'the replies you ask it about'}.` : '');
   },
   parts() { const n = partsOn(), all = n === CORE.length; $('#partsCount').textContent = `${n}/${CORE.length}`; $('#openParts').classList.toggle('partial', !all); ui.hint(); },
@@ -1467,7 +1476,7 @@ const ui = {
   atts() {
     const row = $('#attRow'); row.textContent = '';
     state.atts.forEach((a, i) => row.append(el('span', { class: 'att' }, `📎 ${a.name} · ${a.text.length.toLocaleString('en-US')} characters`, el('button', { title: 'Remove', onclick: () => { state.atts.splice(i, 1); ui.atts(); ui.busy(); } }, '✕'))));
-    if (state.media.length && !mediaSeen(settings.features)) row.append(el('div', { class: 'offs', id: 'mediaOff' }, '“Pictures and sound” is switched off, so Nano will be told only that this was attached. ', el('button', { class: 'try', onclick: () => { setPart('media', true); ui.atts(); } }, 'Switch it on')));
+    if (state.media.length && !mediaSeen(settings.features)) row.append(el('div', { class: 'offs', id: 'mediaOff' }, ('“Pictures and sound” is switched off, so ' + NANO + ' will be told only that this was attached. '), el('button', { class: 'try', onclick: () => { setPart('media', true); ui.atts(); } }, 'Switch it on')));
     state.media.forEach((m, i) => row.append(el('span', { class: 'att' }, m.kind === 'image' ? el('img', { class: 'thumb', src: m.data, alt: '' }) : '🔊', m.kind === 'image' ? m.name : `${m.name} · ${Math.round(m.secs)} seconds`, el('button', { title: 'Remove', onclick: () => { state.media.splice(i, 1); ui.atts(); ui.busy(); } }, '✕'))));
   },
   thread() {
@@ -1476,9 +1485,9 @@ const ui = {
     if (!chat.turns.length) { th.append(welcome()); return; }
     chat.turns.forEach((t, i) => {
       const seg = chat.segments.find(s => s.to === i);
-      if (seg) th.append(el('div', { class: 'divider' }, el('details', null, el('summary', null, `Up to here, Nano now works from a summary: “${seg.title}”`), el('p', null, seg.gist || 'No summary was written for this part.'))));
-      if (i && i === chat.seenFrom && i > (chat.compactedUpTo || 0)) th.append(el('div', { class: 'divider' }, el('details', null, el('summary', null, 'Nano no longer sees anything above this line'),
-        el('p', null, 'Its memory filled up, and with the contents list switched off the oldest messages simply fell out of view. They are still saved here, but Nano has no summary of them.'))));
+      if (seg) th.append(el('div', { class: 'divider' }, el('details', null, el('summary', null, `Up to here, ${NANO} now works from a summary: “${seg.title}”`), el('p', null, seg.gist || 'No summary was written for this part.'))));
+      if (i && i === chat.seenFrom && i > (chat.compactedUpTo || 0)) th.append(el('div', { class: 'divider' }, el('details', null, el('summary', null, (NANO + ' no longer sees anything above this line')),
+        el('p', null, ('Its memory filled up, and with the contents list switched off the oldest messages simply fell out of view. They are still saved here, but ' + NANO + ' has no summary of them.')))));
       th.append(t.role === 'user' ? userNode(t, i) : botNode(t, i));
     });
     ui.title(); ui.meter(); ui.down(true);
@@ -1500,7 +1509,7 @@ const ui = {
 };
 // ───────────────────────────── attaching pictures and sound ─────────────────────────────
 const flash = text => { ui.hint(text); clearTimeout(flash.t); flash.t = setTimeout(() => ui.hint(), 7000); };
-const mediaOK = () => { if (engine.media) return true; flash('On this computer Gemini Nano takes only text, not pictures or sound.'); return false; };
+const mediaOK = () => { if (engine.media) return true; flash(('On this computer ' + MODEL + ' takes only text, not pictures or sound.')); return false; };
 // A picture is made no larger than 1,024 points across (Nano spends the same memory on any size) and kept as a JPEG.
 async function pictureFrom(blob, name) {
   const bmp = await createImageBitmap(blob), k = Math.min(1, 1024 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
@@ -1558,7 +1567,7 @@ function takePhoto() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       if (!$('#dlg').open || $('#dTitle').textContent !== 'Take a photo') return stop();
-      video.srcObject = stream; take.disabled = false; msg.textContent = 'The photo stays on this computer. Nano gets it only when you send your message.';
+      video.srcObject = stream; take.disabled = false; msg.textContent = ('The photo stays on this computer. ' + NANO + ' gets it only when you send your message.');
     } catch (e) { video.hidden = true; msg.textContent = noDevice(e, 'camera', 'a picture'); }
   })();
 }
@@ -1586,7 +1595,7 @@ function recordSound() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (!$('#dlg').open || $('#dTitle').textContent !== 'Record sound') return stop();
-      go.disabled = false; msg.textContent = 'Up to two minutes. The recording stays on this computer. Nano gets it only when you send your message.';
+      go.disabled = false; msg.textContent = ('Up to two minutes. The recording stays on this computer. ' + NANO + ' gets it only when you send your message.');
     } catch (e) { msg.textContent = noDevice(e, 'microphone', 'a sound'); }
   })();
 }
@@ -1612,7 +1621,7 @@ function userNode(t, i) {
   return el('div', { class: 'msg user', id: 't-' + t.id, 'data-i': i },
     (t.atts || []).map(a => el('span', { class: 'att' }, `📎 ${a.name} · ${a.text.length.toLocaleString('en-US')} characters`)),
     (t.media || []).map(m => el('div', { class: 'media' }, m.kind === 'image' ? el('img', { class: 'pic', src: m.data, alt: m.desc || `A picture: ${m.name}` }) : el('audio', { controls: true, preload: 'metadata', src: m.data, title: m.name }),
-      m.desc != null ? el('details', { class: 'saw' }, el('summary', null, `What Nano made of this ${KIND[m.kind]}`), el('p', null, m.desc || 'Nano could not put it into words.'), el('p', null, 'Nano wrote this in a separate request, after its reply. The page uses it in summaries of a long conversation, when looking back, and for the coach.')) : null)),
+      m.desc != null ? el('details', { class: 'saw' }, el('summary', null, `What ${NANO} made of this ${KIND[m.kind]}`), el('p', null, m.desc || (NANO + ' could not put it into words.')), el('p', null, (NANO + ' wrote this in a separate request, after its reply. The page uses it in summaries of a long conversation, when looking back, and for the coach.'))) : null)),
     t.text ? el('div', { class: 'bubble' }, t.text) : null);
 }
 // Which switched-off part would most likely have changed this reply? Offered under the latest reply as "try again with it on".
@@ -1711,8 +1720,8 @@ function botNode(t, i) {
         el('div', { class: 'cap' }, el('b', null, `Try ${k + 2}`), el('span', null, partsDiff(f, v.f)), v.ms != null ? el('button', { title: 'Remove this try', onclick: () => { t.variants = t.variants.filter(x => x !== v); ui.bot(t.id); db.put(chat).catch(console.warn); } }, '✕') : null),
         replyParts(v), verdictOn(v),
         v.ms != null ? el('div', { class: 'tools' },
-          v.text && FEATURES.some(p => !!v.f[p.k] !== !!settings.features[p.k]) ? el('button', { class: 'tool carry', title: 'Makes this the answer Nano remembers, and switches the parts to the ones this try used, for the rest of the chat.', onclick: () => { const parts = { ...v.f }; keepAnswer(t, v); setParts(parts); } }, 'Carry on from this answer, with these parts') : null,
-          v.text ? el('button', { class: 'tool', title: 'Nano remembers only one answer to each message. This makes it this one, and the first answer becomes the try.', onclick: () => keepAnswer(t, v) }, 'Continue the chat from this answer') : null,
+          v.text && FEATURES.some(p => !!v.f[p.k] !== !!settings.features[p.k]) ? el('button', { class: 'tool carry', title: ('Makes this the answer ' + NANO + ' remembers, and switches the parts to the ones this try used, for the rest of the chat.'), onclick: () => { const parts = { ...v.f }; keepAnswer(t, v); setParts(parts); } }, 'Carry on from this answer, with these parts') : null,
+          v.text ? el('button', { class: 'tool', title: (NANO + ' remembers only one answer to each message. This makes it this one, and the first answer becomes the try.'), onclick: () => keepAnswer(t, v) }, 'Continue the chat from this answer') : null,
           FEATURES.some(p => !!v.f[p.k] !== !!settings.features[p.k]) ? el('button', { class: 'tool', onclick: () => setParts(v.f) }, 'Use these parts from now on') : null) : null))));
     // A try changes nothing else. Say so where it matters: on the latest reply, when a try used a part that is not switched on now.
     if (done && i === chat.turns.length - 1 && t.variants.some(v => v.ms != null && v.text && FEATURES.some(p => v.f[p.k] && !settings.features[p.k])))
@@ -1722,8 +1731,8 @@ function botNode(t, i) {
     if (done && partsOn(f) < CORE.length) kids.push(el('div', { class: 'offs' }, 'For this reply: ' + partsLabel(f) + '.'));
   }
   // For a few hours in November 2026 the page could run another model in Nano's place. A reply from then says so.
-  if (done && [t, ...(t.variants || [])].some(x => x.model)) kids.push(el('div', { class: 'offs by' }, `Written by ${[...new Set([t, ...(t.variants || [])].map(x => x.model).filter(Boolean))].join(' and ')} in an earlier experiment, not by Gemini Nano.`));
-  if (done && [t, ...(t.variants || [])].some(x => x.told)) kids.push(el('div', { class: 'offs told' }, t.told ? 'Nano had your own instructions for this reply, not the page’s. ' : 'Some of these answers had your own instructions, not the page’s. ', el('button', { class: 'try', onclick: showSettings }, 'See them in Settings')));
+  if (done && [t, ...(t.variants || [])].some(x => x.model)) kids.push(el('div', { class: 'offs by' }, `Written by ${[...new Set([t, ...(t.variants || [])].map(x => x.model).filter(Boolean))].join(' and ')} in an earlier experiment, not by ${MODEL}.`));
+  if (done && [t, ...(t.variants || [])].some(x => x.told)) kids.push(el('div', { class: 'offs told' }, t.told ? (NANO + ' had your own instructions for this reply, not the page’s. ') : 'Some of these answers had your own instructions, not the page’s. ', el('button', { class: 'try', onclick: showSettings }, 'See them in Settings')));
   if (done) {
     const nd = nudgeFor(chat, i);
     if (nd) kids.push(el('div', { class: 'nudge' }, el('span', null, el('b', null, `💡 “${PART[nd.k].name}” is off. `), PART[nd.k].off),
@@ -1747,7 +1756,7 @@ function replyParts(t) {
     if (s.status === 'running') return el('div', { class: 'status' }, el('span', { class: 'spin' }), s.label);
     const more = el('div', { class: 'more' });
     if (s.how) more.append(el('div', null, s.how));
-    if (s.evidence && s.tool !== 'save_note') more.append(el('div', null, 'What Nano was given:'), el('pre', null, s.evidence));
+    if (s.evidence && s.tool !== 'save_note') more.append(el('div', null, ('What ' + NANO + ' was given:')), el('pre', null, s.evidence));
     if (s.ms != null) more.append(el('div', null, `Took ${(s.ms / 1000).toFixed(1)} seconds.`));
     const sum = el('summary', null, el('span', null, s.status === 'error' ? '⚠️' : STEP_ICON[s.tool]), el('span', null, s.label));
     if (s.tool === 'save_note' && s.undo && !s.undone && s.status === 'ok') sum.append(el('button', { class: 'undo', onclick: e => { e.preventDefault(); undoNote(t, s); } }, 'Undo'));
@@ -1762,7 +1771,7 @@ function replyParts(t) {
     t.note ? el('div', { class: 'stopped' }, t.note) : null,
     t.stopped ? el('div', { class: 'stopped' }, 'Stopped.') : null,
     t.error ? el('div', { class: 'status', style: 'color:var(--warn)' }, `Something went wrong: ${t.error}`) : null,
-    t.check && !t.phase ? el('div', { class: 'check' + (t.check.ok ? '' : ' bad') }, '🔁 Nano’s second look: ' + (t.check.ok ? 'it saw no problem.' : t.check.note || 'it thinks something is off.')) : null,
+    t.check && !t.phase ? el('div', { class: 'check' + (t.check.ok ? '' : ' bad') }, ('🔁 ' + NANO + '’s second look: ') + (t.check.ok ? 'it saw no problem.' : t.check.note || 'it thinks something is off.')) : null,
     t.sources && t.sources.length && !t.phase ? el('div', { class: 'sources' }, t.sources.map((s, i) => s.url && (!cited.size || cited.has(i + 1)) ? el('a', { href: s.url, target: '_blank', rel: 'noopener', title: s.title }, `${i + 1}. ${s.title}`) : null)) : null];
 }
 function undoNote(t, s) {
@@ -1780,10 +1789,10 @@ function welcome() {
   if (on === CORE.length) return el('div', { class: 'welcome' }, LOGO(), el('h2', null, 'What shall we talk about?'),
     el('p', null, engine.media ? 'This chatbot runs on your own computer. It can calculate, look things up, keep notes, read pages and long texts you give it, and look at pictures and listen to recordings.' : 'This chatbot runs on your own computer. It can calculate, look things up, keep notes, and read pages and long texts you give it.'),
     el('div', { class: 'tries' }, tries.map(([q, sub]) => el('button', { onclick: () => send(q) }, q, el('small', null, sub)))),
-    el('div', { class: 'more' }, el('button', { class: 'try', onclick: () => setParts(defaultParts(false)) }, 'How much of this is the model itself? Start from bare Nano and build the chatbot up.')));
+    el('div', { class: 'more' }, el('button', { class: 'try', onclick: () => setParts(defaultParts(false)) }, ('How much of this is the model itself? Start from bare ' + NANO + ' and build the chatbot up.'))));
   // Some parts are off: offer things to try that the missing parts would have handled.
   const next = CORE.filter(f => !F[f.k] && f.probe).slice(0, 4);
-  return el('div', { class: 'welcome' }, LOGO(), el('h2', null, on ? 'A chatbot under construction' : 'This is bare Gemini Nano'),
+  return el('div', { class: 'welcome' }, LOGO(), el('h2', null, on ? 'A chatbot under construction' : ('This is bare ' + MODEL)),
     el('p', null, on ? `${on} of the ${CORE.length} parts are switched on. Try something a missing part would have handled, then switch that part on and compare.`
       : 'Every part this page adds is switched off: no instructions, no tools, no help with memory. Try what it cannot do yet, then switch on the part that fixes it.'),
     el('div', { class: 'tries' }, next.map(f => el('button', { onclick: () => send(f.probe) }, f.probe, el('small', null, `“${f.name}” is off`)))),
@@ -1791,17 +1800,18 @@ function welcome() {
 }
 function door() {
   const d = state.door || { kind: 'checking' };
-  if (d.kind === 'none') return el('div', { class: 'door' }, el('h2', null, 'This page needs Chrome’s built-in AI'),
-    el('p', null, 'Nano Chat talks only to Gemini Nano, the small model that Chrome runs on your own computer. This browser does not offer it.'),
-    el('ul', null, el('li', null, 'Use Chrome 148 or newer on a Windows, Mac or Linux computer, or a Chromebook Plus.'), el('li', null, 'The computer needs about 22 GB of free disk space, and either a graphics card with more than 4 GB of memory or 16 GB of RAM.'), el('li', null, 'Phones and tablets are not supported yet.')),
+  if (d.kind === 'none') return el('div', { class: 'door' }, el('h2', null, 'This page needs a browser’s built-in AI'),
+    el('p', null, 'Nano Chat talks to the small model a browser runs on your own computer: Gemini Nano in Chrome, or Aion Instruct in Microsoft Edge. This browser does not offer one' + (EDGE ? ' yet.' : '.')),
+    EDGE ? el('ul', null, el('li', null, 'In Edge 158 or newer, open edge://flags, find “Prompt API”, set it to Enabled, and restart Edge.'), el('li', null, 'Edge runs it on Windows 10 or 11, on a Mac with macOS 13.3 or newer, and (from Edge 159) on Linux. The computer needs about 20 GB of free disk space and a graphics card with 3 GB of memory.'), el('li', null, 'Or open this page in Chrome 148 or newer.'))
+      : el('ul', null, el('li', null, 'Use Chrome 148 or newer on a Windows, Mac or Linux computer, or a Chromebook Plus.'), el('li', null, 'The computer needs about 22 GB of free disk space, and either a graphics card with more than 4 GB of memory or 16 GB of RAM.'), el('li', null, 'Or use Microsoft Edge 158 or newer with its “Prompt API” setting switched on in edge://flags.'), el('li', null, 'Phones and tablets are not supported yet.')),
     d.why ? el('p', { class: 'count' }, d.why) : null, canvasDoor());
   if (d.kind === 'download') return el('div', { class: 'door' }, el('h2', null, 'One download first'),
-    el('p', null, 'Chrome needs to fetch Gemini Nano once (a few gigabytes). After that this page works offline, apart from web searches.'),
+    el('p', null, (BROWSER + ' needs to fetch ' + MODEL + ' once (' + (EDGE ? 'about a gigabyte' : 'a few gigabytes') + '). After that this page works offline, apart from web searches.')),
     el('button', { class: 'big', onclick: () => start(true) }, 'Get the model'));
-  if (d.kind === 'loading') return el('div', { class: 'door' }, el('h2', null, d.pct != null && d.pct < 1 ? 'Downloading Gemini Nano…' : 'Waking up Gemini Nano…'),
+  if (d.kind === 'loading') return el('div', { class: 'door' }, el('h2', null, d.pct != null && d.pct < 1 ? ('Downloading ' + MODEL + '…') : ('Waking up ' + MODEL + '…')),
     d.pct != null && d.pct < 1 ? el('progress', { value: d.pct, max: 1 }) : el('div', { class: 'status', style: 'justify-content:center' }, el('span', { class: 'spin' }), 'This can take up to half a minute the first time.'));
-  if (d.kind === 'error') return el('div', { class: 'door' }, el('h2', null, 'Gemini Nano did not start'), el('p', null, d.why), el('button', { class: 'big', onclick: () => start(true) }, 'Try again'), ' ', el('button', { class: 'plain', onclick: () => frameCheck() }, 'Check what this frame allows'));
-  return el('div', { class: 'door' }, el('div', { class: 'status', style: 'justify-content:center' }, el('span', { class: 'spin' }), 'Checking for Gemini Nano…'));
+  if (d.kind === 'error') return el('div', { class: 'door' }, el('h2', null, (MODEL + ' did not start')), el('p', null, d.why), el('button', { class: 'big', onclick: () => start(true) }, 'Try again'), ' ', el('button', { class: 'plain', onclick: () => frameCheck() }, 'Check what this frame allows'));
+  return el('div', { class: 'door' }, el('div', { class: 'status', style: 'justify-content:center' }, el('span', { class: 'spin' }), ('Checking for ' + MODEL + '…')));
 }
 
 // dialogs
@@ -1811,22 +1821,22 @@ function showMemory() {
   const from = viewFrom(chat), F = settings.features, cu = chat.compactedUpTo || 0;
   const total = engine.usage() ?? sizeFrom(chat, from, chat.turns.length, F), recent = Math.max(0, total - sys), W = engine.W;
   const verbatim = chat.turns.length - from, covered = F.contents && chat.segments.length ? cu : 0, lost = from - covered;
-  dialog('What Nano can see right now',
-    el('p', null, `Gemini Nano can hold about ${W.toLocaleString('en-US')} tokens at once, roughly ${(Math.round(W * .7 / 100) * 100).toLocaleString('en-US')} words. That has to cover its instructions, your notes, the conversation, anything a tool brings back, and the reply it is writing.`),
+  dialog(('What ' + NANO + ' can see right now'),
+    el('p', null, `${MODEL} can hold about ${W.toLocaleString('en-US')} tokens at once, roughly ${(Math.round(W * .7 / 100) * 100).toLocaleString('en-US')} words. That has to cover its instructions, your notes, the conversation, anything a tool brings back, and the reply it is writing.`),
     el('div', { class: 'stack' }, el('i', { class: 'k1', style: `width:${100 * sys / W}%` }), el('i', { class: 'k2', style: `width:${100 * recent / W}%` })),
     el('div', { class: 'legend' }, el('span', null, el('b', { class: 'k1' }), `Instructions, notes and contents: ${sys.toLocaleString('en-US')}`), el('span', null, el('b', { class: 'k2' }), `Recent messages: ${recent.toLocaleString('en-US')}`), el('span', null, el('b', { style: 'background:var(--line)' }), `Free: ${Math.max(0, W - total).toLocaleString('en-US')}`)),
     el('p', null, from
-      ? `Nano sees the last ${verbatim} messages word for word.` + (covered ? ` ${covered} earlier ones are covered by ${chat.segments.length} contents ${chat.segments.length === 1 ? 'entry' : 'entries'}.` : '') + (lost > 0 ? ` ${lost} earlier ones have fallen out of its view with no summary.` : '') +
+      ? `${NANO} sees the last ${verbatim} messages word for word.` + (covered ? ` ${covered} earlier ones are covered by ${chat.segments.length} contents ${chat.segments.length === 1 ? 'entry' : 'entries'}.` : '') + (lost > 0 ? ` ${lost} earlier ones have fallen out of its view with no summary.` : '') +
         (F.recall ? ' It can look back into the earlier messages when you ask.' : ' “Looking back” is switched off, so it cannot reread them.') + ' The whole conversation stays saved in this browser.'
-      : `Nano sees all ${verbatim} messages of this conversation word for word. When the conversation outgrows the space, ` + (F.contents ? 'older parts are summarized into a contents list, and nothing is deleted.' : 'the oldest messages will fall out of its view, because the contents list is switched off. They stay saved in this browser.')),
-    W < engine.realW ? el('p', { class: 'sub' }, `This page is pretending Nano's memory is ${W.toLocaleString('en-US')} tokens (really ${engine.realW.toLocaleString('en-US')}), so that the memory parts can be seen at work.`) : null,
-    el('details', null, el('summary', null, 'Show the exact instructions Nano was given'), el('pre', null, sysText || '(Nothing. Every part that tells Nano something is switched off, so it gets only the messages.)'),
-      el('p', { class: 'sub' }, toldEdited() ? 'Some of these words are your own. ' : 'These words are the page’s, not Nano’s. ', el('button', { class: 'try', onclick: showSettings }, 'Rewrite them in Settings'))));
+      : `${NANO} sees all ${verbatim} messages of this conversation word for word. When the conversation outgrows the space, ` + (F.contents ? 'older parts are summarized into a contents list, and nothing is deleted.' : 'the oldest messages will fall out of its view, because the contents list is switched off. They stay saved in this browser.')),
+    W < engine.realW ? el('p', { class: 'sub' }, `This page is pretending ${NANO}'s memory is ${W.toLocaleString('en-US')} tokens (really ${engine.realW.toLocaleString('en-US')}), so that the memory parts can be seen at work.`) : null,
+    el('details', null, el('summary', null, ('Show the exact instructions ' + NANO + ' was given')), el('pre', null, sysText || ('(Nothing. Every part that tells ' + NANO + ' something is switched off, so it gets only the messages.)')),
+      el('p', { class: 'sub' }, toldEdited() ? 'Some of these words are your own. ' : ('These words are the page’s, not ' + NANO + '’s. '), el('button', { class: 'try', onclick: showSettings }, 'Rewrite them in Settings'))));
 }
 function showContents() {
   const chat = state.chat;
   dialog('Contents of this conversation',
-    el('p', { class: 'sub' }, 'Nano wrote these entries when older messages no longer fit in its memory. It reads this list in place of those messages. Choose one to jump to that part.'),
+    el('p', { class: 'sub' }, (NANO + ' wrote these entries when older messages no longer fit in its memory. It reads this list in place of those messages. Choose one to jump to that part.')),
     chat.segments.map((s, i) => el('button', { class: 'toc', onclick: () => { $('#dlg').close(); const n = document.getElementById('t-' + chat.turns[s.from].id); if (n) n.scrollIntoView({ behavior: 'smooth', block: 'start' }); } },
       el('strong', null, `${i + 1}. ${s.title}`), el('small', null, s.gist), s.topics && s.topics.length ? el('small', null, 'Topics: ' + s.topics.join(', ')) : null)));
 }
@@ -1835,21 +1845,22 @@ function showParts() {
   const body = el('div'), open = new Set();          // the parts whose longer explanation is showing
   const draw = () => {
     body.textContent = ''; const F = settings.features, on = partsOn();
-    body.append(el('p', null, 'By itself Gemini Nano only continues a conversation. Everything else here is a part this page adds around it. Switch a part off to see what it was doing, or start with none and build the chatbot up.'),
-      el('div', { class: 'row2' }, el('button', { class: 'plain', onclick: () => { setParts(defaultParts(false)); draw(); } }, 'Bare Nano: all off'), el('button', { class: 'plain', onclick: () => { setParts(defaultParts(true)); draw(); } }, 'Everything on'),
+    body.append(el('p', null, ('By itself ' + MODEL + ' only continues a conversation. Everything else here is a part this page adds around it. Switch a part off to see what it was doing, or start with none and build the chatbot up.')),
+      el('div', { class: 'row2' }, el('button', { class: 'plain', onclick: () => { setParts(defaultParts(false)); draw(); } }, ('Bare ' + NANO + ': all off')), el('button', { class: 'plain', onclick: () => { setParts(defaultParts(true)); draw(); } }, 'Everything on'),
         el('span', { class: 'count', style: 'align-self:center' }, `${on} of ${CORE.length} on`)));
     for (const p of FEATURES) {
       if (p.g) body.append(el('div', { class: 'group' }, p.g));
       body.append(el('label', { class: 'part' }, el('input', { type: 'checkbox', checked: !!F[p.k], onchange: e => { setPart(p.k, e.target.checked); draw(); } }),
         el('span', { class: 'txt' }, el('b', null, p.name), el('small', null, F[p.k] ? p.on : p.off),
+          p.k === 'media' && engine.ready && !engine.media ? el('small', { style: 'color:var(--warn)' }, `Here ${BROWSER} gives ${NANO} text only, so this part has nothing to hand it.`) : null,
           open.has(p.k) ? el('small', { class: 'moreTxt' }, MORE[p.k], el('span', { class: 'both' }, el('b', null, 'On: '), p.on), el('span', { class: 'both' }, el('b', null, 'Off: '), p.off)) : null,
           el('button', { class: 'try moreBtn', 'aria-expanded': open.has(p.k) ? 'true' : 'false', onclick: e => { e.preventDefault(); open.has(p.k) ? open.delete(p.k) : open.add(p.k); draw(); } }, open.has(p.k) ? 'Less' : 'More about this'),
           p.probe ? el('button', { class: 'try', onclick: e => { e.preventDefault(); $('#dlg').close(); if (state.busy) return; if (state.chat.turns.length) newChat(); send(p.probe); } }, `Try: “${p.probe}”`) : null)));
     }
     body.append(el('div', { class: 'group' }, 'For experiments'),
       el('label', { class: 'part' }, el('input', { type: 'checkbox', checked: !!settings.smallWindow, disabled: !!SIM_WINDOW, onchange: e => { settings.smallWindow = e.target.checked; saveSettings(); engine.dirty = true; ui.meter(); } }),
-        el('span', { class: 'txt' }, el('b', null, 'Pretend Nano’s memory is small'), el('small', null, `1,500 tokens in place of ${engine.realW.toLocaleString('en-US')}. The memory fills after a few messages, so you can watch the contents list and looking back at work without a very long chat.`))),
-      el('p', { class: 'sub', style: 'margin-top:14px' }, 'Under any reply, “Try again…” runs the same message with other parts switched on and shows the answers side by side. Nano does not answer the same way twice, so run it more than once before you conclude anything.'));
+        el('span', { class: 'txt' }, el('b', null, ('Pretend ' + NANO + '’s memory is small')), el('small', null, `1,500 tokens in place of ${engine.realW.toLocaleString('en-US')}. The memory fills after a few messages, so you can watch the contents list and looking back at work without a very long chat.`))),
+      el('p', { class: 'sub', style: 'margin-top:14px' }, ('Under any reply, “Try again…” runs the same message with other parts switched on and shows the answers side by side. ' + NANO + ' does not answer the same way twice, so run it more than once before you conclude anything.')));
   };
   draw(); dialog('The parts of this chatbot', body);
 }
@@ -1872,12 +1883,12 @@ function showNotes() {
     if (!notes.length) list.append(el('p', { class: 'sub' }, 'No notes yet. Say “remember that…” in a chat, or add one here.'));
     notes.forEach(n => list.append(el('div', { class: 'note' },
       el('div', { class: 'row' }, el('input', { type: 'text', value: n.title, placeholder: 'Title', oninput: e => { n.title = e.target.value; saveNotes(); } }),
-        el('label', { title: 'Nano always sees a pinned note in full' }, el('input', { type: 'checkbox', checked: !!n.pinned, onchange: e => { n.pinned = e.target.checked; saveNotes(); } }), 'Pinned'),
+        el('label', { title: (NANO + ' always sees a pinned note in full') }, el('input', { type: 'checkbox', checked: !!n.pinned, onchange: e => { n.pinned = e.target.checked; saveNotes(); } }), 'Pinned'),
         el('button', { class: 'icon', title: 'Delete this note', onclick: () => { notes = notes.filter(x => x !== n); saveNotes(); draw(); } }, '🗑')),
       el('textarea', { value: n.body, placeholder: 'What to remember', oninput: e => { n.body = e.target.value; saveNotes(); } }))));
   };
   draw();
-  dialog('Notes', settings.features.notes ? null : el('p', { style: 'color:var(--warn)' }, 'The “Notes” part is switched off, so Nano does not see these and cannot save new ones.'), el('p', { class: 'sub' }, 'Notes are kept in this browser and shared by all your chats. Nano sees short notes in full; when there are too many to fit, it sees the titles and opens a note when it needs one. Pin a note to keep it always in view.'),
+  dialog('Notes', settings.features.notes ? null : el('p', { style: 'color:var(--warn)' }, ('The “Notes” part is switched off, so ' + NANO + ' does not see these and cannot save new ones.')), el('p', { class: 'sub' }, ('Notes are kept in this browser and shared by all your chats. ' + NANO + ' sees short notes in full; when there are too many to fit, it sees the titles and opens a note when it needs one. Pin a note to keep it always in view.')),
     list, el('button', { class: 'plain', onclick: () => { notes.push({ id: uid(), title: '', body: '', pinned: false }); saveNotes(); draw(); list.lastChild.querySelector('input').focus(); } }, '＋ Add a note'));
 }
 function showSettings() {
@@ -1915,7 +1926,7 @@ function showSettings() {
       p.custom ? null : el('select', { id: 'coachModelSel', onchange: e => { if (e.target.value === '*') { co.otherModel = co.provider; } else { co.otherModel = ''; co.models[co.provider] = e.target.value === p.model ? '' : e.target.value; } saveCoach(); drawCoach(); if (e.target.value === '*') $('#coachModel').focus(); } },
         p.models.map(m => el('option', { value: m, selected: !typed && (cur || p.model) === m }, m + (m === p.model ? ' (suggested)' : ''))), el('option', { value: '*', selected: typed }, 'Other: I’ll type its name')),
       typed ? modelBox : null,
-      p.custom || p.keyless ? null : el('label', { class: 'radio', style: 'margin-top:10px' }, el('input', { type: 'checkbox', id: 'coachPics', checked: !!co.pictures, onchange: e => { co.pictures = e.target.checked; saveCoach(); } }), el('span', null, 'Let the coach see pictures I attach', el('small', null, 'As it is, the coach gets only Nano’s own description of a picture. Ticked, the picture itself goes to that company with the reply. Recordings are never sent: the coach gets what Nano wrote down from them.'))),
+      p.custom || p.keyless ? null : el('label', { class: 'radio', style: 'margin-top:10px' }, el('input', { type: 'checkbox', id: 'coachPics', checked: !!co.pictures, onchange: e => { co.pictures = e.target.checked; saveCoach(); } }), el('span', null, 'Let the coach see pictures I attach', el('small', null, ('As it is, the coach gets only ' + NANO + '’s own description of a picture. Ticked, the picture itself goes to that company with the reply. Recordings are never sent: the coach gets what ' + NANO + ' wrote down from them.')))),
       el('label', { class: 'radio', style: 'margin-top:10px' }, el('input', { type: 'checkbox', checked: !!co.quiz, onchange: e => { co.quiz = e.target.checked; saveCoach(); } }), el('span', null, 'Ask me what I think first', el('small', null, 'The coach waits for your own judgment of a reply before it shows its view.'))),
       p.custom ? null : el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!co.search, onchange: e => { co.search = e.target.checked; saveCoach(); } }), el('span', null, 'Let the coach check facts on the web', el('small', null, 'Uses that company’s own web search, which is charged per search on top of the usual cost. Without it the coach knows nothing recent.')))].flat(Infinity).filter(Boolean));
   };
@@ -1928,9 +1939,9 @@ function showSettings() {
   const tick = (key, title, sub, off) => el('label', { class: 'radio' }, el('input', { type: 'checkbox', checked: !!vo[key], disabled: !!off, onchange: e => { vo[key] = e.target.checked; saveVoice(); } }), el('span', null, title, el('small', null, sub)));
   const voiceBox = [
     el('label', { style: 'margin-top:18px' }, 'Voice'),
-    tick('input', 'Show a microphone button, to speak a message', SR ? 'Chrome turns your speech into text. This page asks Chrome to do that on this computer, so your voice stays here.' : 'This browser has no speech recognition.', !SR),
+    tick('input', 'Show a microphone button, to speak a message', SR ? BROWSER + ' turns your speech into text. This page asks ' + BROWSER + ' to do that on this computer, so your voice stays here.' : 'This browser has no speech recognition.', !SR),
     tick('auto', 'Send the message as soon as I stop speaking', 'Otherwise the words go into the message box for you to check first.', !SR),
-    tick('online', 'Allow Chrome’s online speech recognition', 'Only used when Chrome cannot recognize speech on this computer. The sound of your voice then goes to Google.', !SR),
+    tick('online', 'Allow ' + BROWSER + '’s online speech recognition', 'Only used when ' + BROWSER + ' cannot recognize speech on this computer. The sound of your voice then goes to ' + MAKER + '.', !SR),
     tick('output', 'Read every reply aloud', canSpeak ? 'There is also a “Read aloud” button under each reply. Code, tables and pictures are skipped.' : 'This browser cannot speak.', !canSpeak),
     canSpeak ? [el('label', { for: 'voiceSel' }, 'Reading voice'), voiceSel,
       el('div', { class: 'row2', style: 'margin-top:8px;align-items:center' },
@@ -1941,16 +1952,16 @@ function showSettings() {
   const toldPre = el('pre'), toldState = el('div', { class: 'toldState' }), toldBoxes = {};
   const drawTold = () => {
     const sys = systemPrompt(state.chat);
-    toldPre.textContent = sys || '(Nothing. Every part that tells Nano something is switched off, so it gets only the messages.)';
+    toldPre.textContent = sys || ('(Nothing. Every part that tells ' + NANO + ' something is switched off, so it gets only the messages.)');
     toldState.textContent = '';
     toldState.append(toldEdited() ? 'Your own words are in use, from the next message on.' : 'These are the page’s own words.',
       toldEdited() ? el('button', { class: 'plain', id: 'toldReset', onclick: () => { for (const k of Object.keys(TOLD)) { setTold(k, null); toldBoxes[k].value = TOLD[k]; } drawTold(); } }, 'Back to the page’s words') : '');
   };
   const toldBox = (k, id, rows) => (toldBoxes[k] = el('textarea', { id, rows, value: told(k), oninput: e => { setTold(k, e.target.value); drawTold(); } }));
   const toldSection = [
-    el('label', { for: 'toldBriefing' }, 'What Nano is told'),
-    el('p', { class: 'sub' }, 'Before your first message, the page gives Nano these instructions. Nano did not write them and cannot change them, but you can. Rewrite them and see how the replies change.'),
-    settings.features.instructions ? null : el('p', { class: 'sub', style: 'color:var(--warn)' }, 'The “Instructions” part is switched off, so at the moment Nano is told none of this.'),
+    el('label', { for: 'toldBriefing' }, ('What ' + NANO + ' is told')),
+    el('p', { class: 'sub' }, ('Before your first message, the page gives ' + NANO + ' these instructions. ' + NANO + ' did not write them and cannot change them, but you can. Rewrite them and see how the replies change.')),
+    settings.features.instructions ? null : el('p', { class: 'sub', style: 'color:var(--warn)' }, ('The “Instructions” part is switched off, so at the moment ' + NANO + ' is told none of this.')),
     toldBox('briefing', 'toldBriefing', 6), toldState,
     el('details', { class: 'toldMore' }, el('summary', null, 'Lines that other parts add'),
       el('p', { class: 'sub' }, 'When these parts are on, the page adds a line about each to the instructions.'),
@@ -1958,7 +1969,7 @@ function showSettings() {
       el('label', { for: 'toldDate' }, 'When “Today’s date” is on'), toldBox('date', 'toldDate', 2), el('p', { class: 'sub', style: 'margin-top:4px' }, 'The page puts today’s date where it says {date}.'),
       el('label', { for: 'toldTools' }, 'When any part that looks things up is on'), toldBox('tools', 'toldTools', 4),
       el('label', { for: 'toldMedia' }, 'When “Pictures and sound” is on'), toldBox('media', 'toldMedia', 3)),
-    el('details', { class: 'toldMore' }, el('summary', null, 'Everything Nano is given now, word for word'), toldPre,
+    el('details', { class: 'toldMore' }, el('summary', null, ('Everything ' + NANO + ' is given now, word for word')), toldPre,
       el('p', { class: 'sub', style: 'margin-top:6px' }, 'Your notes and the contents list of a long conversation are added after the instructions. The page also gives short instructions of its own to the helpers that choose a tool and write summaries; those are not shown here.'))];
   drawTold();
   dialog('Settings',
@@ -1966,20 +1977,20 @@ function showSettings() {
     el('label', { style: 'margin-top:18px' }, 'Where searches go'),
     radio('wikipedia', 'Wikipedia', 'No key needed. Good for facts; no news.'), radio('tavily', 'The whole web, with a Tavily key', 'A search service made for AI assistants.'), radio('serper', 'The whole web, with a Serper key', 'Google results.'),
     el('label', { class: 'radio' }, el('input', { type: 'radio', name: 'prov', id: 'provAi', checked: settings.provider === 'ai', disabled: !aiSearchReady(), onchange: () => { settings.provider = 'ai'; saveSettings(); drawKey(); } }),
-      el('span', null, aiSearchReady() ? `The whole web, through ${coachName()}` : 'The whole web, through the AI whose key you give below', el('small', null, aiSearchReady() ? COACHES[settings.coach.provider].keyless ? 'No key: inside Gemini Canvas the search goes to Gemini on your Google account. It searches and reports what the pages say, and Nano writes the answer.' : `Uses the ${coachName()} key from the coach settings below. It searches and reports what the pages say, and Nano writes the answer. Each search is charged to that key.` : 'Give a Claude, Gemini or ChatGPT key under Coach, further down, to use this.'))), keyBox,
-    about('When the “Web search” part is on and a message needs a fact, the page sends a few search words, not your whole message, to the service chosen here, and gives Nano the top results to answer from.',
+      el('span', null, aiSearchReady() ? `The whole web, through ${coachName()}` : 'The whole web, through the AI whose key you give below', el('small', null, aiSearchReady() ? COACHES[settings.coach.provider].keyless ? 'No key: inside Gemini Canvas the search goes to Gemini on your Google account. It searches and reports what the pages say, and Nano writes the answer.' : `Uses the ${coachName()} key from the coach settings below. It searches and reports what the pages say, and ${NANO} writes the answer. Each search is charged to that key.` : 'Give a Claude, Gemini or ChatGPT key under Coach, further down, to use this.'))), keyBox,
+    about(('When the “Web search” part is on and a message needs a fact, the page sends a few search words, not your whole message, to the service chosen here, and gives ' + NANO + ' the top results to answer from.'),
       'Wikipedia needs no key and is good for settled facts, but it has no news. Tavily and Serper search the whole web. Each needs a key, which you get by signing up with them, and each has a free allowance. With the last choice, the coach’s AI does the searching and reports what the pages say.'),
-    el('label', { for: 'recallSel' }, 'How Nano looks back into a long conversation'),
+    el('label', { for: 'recallSel' }, ('How ' + NANO + ' looks back into a long conversation')),
     el('select', { id: 'recallSel', onchange: e => { settings.recall = e.target.value; saveSettings(); } },
-      [['both', 'Contents list and keywords together'], ['contents', 'Contents list only: Nano picks an entry'], ['keywords', 'Keywords only: match words in the saved messages']].map(([v, t]) => el('option', { value: v, selected: settings.recall === v }, t))),
-    about('This matters only in a long conversation, after the oldest messages no longer fit in Nano’s memory, and only while the “Looking back” part is on. It decides how the page finds the old messages you are asking about.',
-      'Contents list: Nano reads the list of summaries and picks the entry most likely to hold the answer, and the page shows it those messages. Keywords: the page searches the saved messages for the words in your question, with no model involved. Together: both are tried, and Nano gets whatever either finds.',
-      'To see the difference, switch on “Pretend Nano’s memory is small” in the Parts panel, have a long chat, and ask the same question about its beginning with each choice.'),
+      [['both', 'Contents list and keywords together'], ['contents', ('Contents list only: ' + NANO + ' picks an entry')], ['keywords', 'Keywords only: match words in the saved messages']].map(([v, t]) => el('option', { value: v, selected: settings.recall === v }, t))),
+    about(('This matters only in a long conversation, after the oldest messages no longer fit in ' + NANO + '’s memory, and only while the “Looking back” part is on. It decides how the page finds the old messages you are asking about.'),
+      ('Contents list: ' + NANO + ' reads the list of summaries and picks the entry most likely to hold the answer, and the page shows it those messages. Keywords: the page searches the saved messages for the words in your question, with no model involved. Together: both are tried, and ' + NANO + ' gets whatever either finds.'),
+      ('To see the difference, switch on “Pretend ' + NANO + '’s memory is small” in the Parts panel, have a long chat, and ask the same question about its beginning with each choice.')),
     el('label', { class: 'radio', style: 'margin-top:14px' }, el('input', { type: 'checkbox', checked: settings.reader, onchange: e => { settings.reader = e.target.checked; saveSettings(); } }), el('span', null, 'Read links through r.jina.ai when a site blocks this page', el('small', null, 'Most sites do not let another page read them. The reader service fetches the page for you; it sees the link, nothing else.'))),
     about('A browser stops one web page from reading another unless the other site allows it, and most sites do not. r.jina.ai is a free service that fetches a page and hands back its text. It learns which link you asked for and nothing else about you. With this switched off, links to most sites cannot be read.'),
     voiceBox,
     el('label', { for: 'coachMode', style: 'margin-top:18px' }, 'Coach (optional)'),
-    el('p', { class: 'sub' }, 'A stronger AI can look over Nano’s shoulder. It rates a reply, asks what you think first, and explains what went wrong and what to try. It never joins the chat: Nano does not see what the coach says.'),
+    el('p', { class: 'sub' }, ('A stronger AI can look over ' + NANO + '’s shoulder. It rates a reply, asks what you think first, and explains what went wrong and what to try. It never joins the chat: ' + NANO + ' does not see what the coach says.')),
     el('p', { class: 'sub', id: 'coachLeaves' }, el('strong', null, 'Switching the coach on sends data out of this app. '), 'Each reply it reviews goes to the company you choose, together with your message, the few messages before it, and what the tools found. While the coach is off, none of that is sent.'),
     about('The coach is a much larger model run by a company, reached over the internet with a key that you get from that company and that is charged for each use. It sees one reply at a time, with what led to it, and judges it. It is there to help you learn to judge replies yourself, which is why it can ask for your opinion first.',
       'It is optional. Everything else on this page works without it, and nothing is sent to any company while it is off.'),
@@ -2052,7 +2063,7 @@ function saveChat() {
 html, body { height: auto; } .thread { max-width: 780px; margin: 0 auto; padding: 22px 18px 40px; }</style>
 </head>
 <body>
-<div class="saved"><h1>${esc(chat.title)}</h1><p>A conversation with Gemini Nano, the small model built into Chrome, saved from <a href="https://toontalk.github.io/nano-chat/">Nano Chat</a> on ${when}. ${n} messages.</p></div>
+<div class="saved"><h1>${esc(chat.title)}</h1><p>A conversation with ${MODEL}, the small model built into ${BROWSER}, saved from <a href="https://toontalk.github.io/nano-chat/">Nano Chat</a> on ${when}. ${n} messages.</p></div>
 <div class="thread">${th.innerHTML}</div>
 </body>
 </html>
@@ -2069,7 +2080,7 @@ $('#saveChat').onclick = saveChat;
 // Speaking a message uses Chrome's speech recognition. Chrome can do that on this computer, and this page asks for
 // that; its older way sends the sound of your voice to Google, which is used only if the user allows it in Settings.
 const SR = self.SpeechRecognition || self.webkitSpeechRecognition, mic = { rec: null, on: false };
-const MIC_ERR = { 'not-allowed': 'Chrome was not allowed to use the microphone.', 'service-not-allowed': 'Chrome did not allow speech recognition here.', 'audio-capture': 'No microphone was found.',
+const MIC_ERR = { 'not-allowed': BROWSER + ' was not allowed to use the microphone.', 'service-not-allowed': BROWSER + ' did not allow speech recognition here.', 'audio-capture': 'No microphone was found.',
   network: 'Speech recognition could not reach its service.', 'language-not-supported': 'Speech recognition for English is not installed.' };
 async function micToggle() {
   if (mic.on) { mic.rec.stop(); return; }
@@ -2079,12 +2090,12 @@ async function micToggle() {
   try {
     if (SR.available) {
       let a = await SR.available(want);
-      if (a === 'downloadable' || a === 'downloading') { ui.hint('Getting Chrome’s speech recognition for this computer. This happens once…'); if (SR.install) await SR.install(want); a = await SR.available(want); }
+      if (a === 'downloadable' || a === 'downloading') { ui.hint('Getting ' + BROWSER + '’s speech recognition for this computer. This happens once…'); if (SR.install) await SR.install(want); a = await SR.available(want); }
       local = a === 'available';
     }
   } catch (e) { console.warn(e); }
   mic.starting = false; ui.hint();
-  if (!local && !settings.voice.online) { ui.hint('Chrome cannot recognize speech on this computer. In Settings you can allow its online speech recognition instead.'); return; }
+  if (!local && !settings.voice.online) { ui.hint(BROWSER + ' cannot recognize speech on this computer. In Settings you can allow its online speech recognition instead.'); return; }
   if (local) rec.processLocally = true;
   rec.lang = 'en-US'; rec.interimResults = true; rec.continuous = false;
   const base = input.value.trim();
@@ -2095,7 +2106,7 @@ async function micToggle() {
     if (err && err !== 'no-speech' && err !== 'aborted') ui.hint(MIC_ERR[err] || `Speech recognition stopped (${err}).`);
     else { ui.hint(); if (said && settings.voice.auto && !state.busy) submit(); else input.focus(); }
   };
-  try { rec.start(); mic.rec = rec; mic.on = true; ui.mic(); ui.hint(local ? 'Listening… (your voice stays on this computer)' : 'Listening… (Chrome sends your voice to Google to recognize it)'); }
+  try { rec.start(); mic.rec = rec; mic.on = true; ui.mic(); ui.hint(local ? 'Listening… (your voice stays on this computer)' : 'Listening… (' + BROWSER + ' sends your voice to ' + MAKER + ' to recognize it)'); }
   catch (e) { ui.hint('The microphone could not be started.'); }
 }
 ui.mic = () => { const b = $('#micBtn'); b.hidden = !(SR && settings.voice.input); b.classList.toggle('live', mic.on); b.title = mic.on ? 'Stop listening' : 'Speak your message'; };
@@ -2243,7 +2254,7 @@ async function start(byClick) {
   try {
     if (!LM) { state.door = { kind: 'none' }; ui.thread(); return; }
     const a = await LM.availability(LM_OPTS);
-    if (a === 'unavailable') { state.door = { kind: 'none', why: 'Chrome says this computer cannot run the model.' }; ui.thread(); return; }
+    if (a === 'unavailable') { state.door = { kind: 'none', why: BROWSER + ' says this computer cannot run the model.' }; ui.thread(); return; }
     if (a !== 'available' && !byClick) { state.door = { kind: 'download' }; ui.thread(); return; }
     state.door = { kind: 'loading', pct: a === 'available' ? null : 0 }; ui.thread();
     await engine.init(p => { state.door.pct = p; if (!engine.ready) ui.thread(); });

@@ -187,6 +187,14 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
 </ul>
 <p>Claude's own mistakes on the second day were smaller: a test that expected 33 days until Christmas, which was right only on the day it was written; a test that expected Nano to write a sum in one particular way; and, in the artifact copy, a saved chat without its styles. Each was found by a test failing.</p>
 
+<h2 id="edge">The third day: Microsoft Edge</h2>
+<p>Ken asked whether Edge, which offers the same Prompt API on Microsoft's own model, could run the app. Microsoft's documentation, updated a week earlier, named the model Aion Instruct, 2.3 billion parameters; a month before, reports still said Phi-4-mini. Edge 158, the version already on Ken's computer, has a "Prompt API" switch in <code>edge://flags</code>. Switched on in a throwaway profile, Edge downloaded Aion-1.1-Instruct, a 1.2 GB file, in about two minutes.</p>
+<p>The page ran unchanged. Edge's model has the same calls as Chrome's, including the ones its documentation leaves out: adding to a conversation, copying a session, and measuring how full its memory is, which holds 7,168 tokens to Nano's 9,216. The calculator, the date, notes and recall all worked, and plain answers came in one to two seconds. Saving a note when asked worked in 6 of 6 fresh chats, though once, in a chat that already held other questions, Aion said "Got it" without saving it.</p>
+<p>Three things were wrong. Asked who it was, it said "I'm Nano, a small on-device model built into Chrome", because the page had told it so. The page now names the model after the browser it is in, Aion in Edge and Nano in Chrome, in about a hundred places, including the instructions the model gets. Asked bare, Aion calls itself Microsoft's Aion Instruct; in the page it now says "I'm Aion Instruct, a small on-device model that runs entirely on your computer inside Microsoft Edge."</p>
+<p>Second, Edge says pictures and sound are on offer and then refuses a session that takes them. The page already held back, because it waits for "available" rather than "downloadable", but a browser could say "available" and still refuse. The page now also opens such a session in the background and keeps pictures and sound only if that works. Ken asked whether the app would adapt if a later Edge supports them: it will, since the page asks the model each time it starts and never decides by the browser's name. Third, the start screen asked for Chrome 148; in an Edge without the switch it now says how to turn it on.</p>
+<p>Ken also asked whether Edge's model might run on some phones. Not yet: the switch lists only Mac, Windows and Linux, and Microsoft's requirements say the same, though one of Edge's related debugging switches already lists Android.</p>
+<p>The same day, Ken's question about Google's own move began with an email from the Chrome team: Gemma 4 for the built-in AI was announced on 25 August as a trial in Chrome Canary. Canary on Ken's computer had already downloaded it, a model named <code>gemma4-2b-it</code> in a 2.36 GB file, beside stable Chrome's <code>v3Nano</code> at 4.07 GB. Nano Chat has not yet been tried on it.</p>
+
 <h2>Still unverified</h2>
 <ul>
   <li>The Gemini Canvas copy from a Google account other than Ken's. Signed out, the coach is refused.</li>
@@ -196,18 +204,21 @@ footer { color: var(--muted); font-size: 14px; margin-top: 44px; border-top: 1px
   <li>Voice with a real microphone and loudspeaker. The test Chrome has neither, so stand-ins were used.</li>
   <li>Tavily and Serper searches with real keys.</li>
   <li>The screen shown while Chrome first downloads the model.</li>
+  <li>Edge on a Mac, in an ordinary window rather than a headless one, and with a person using it. Edge for visitors who have not switched it on would need Microsoft's origin trial, which has not been registered.</li>
+  <li>Chrome Canary's Gemma 4 model.</li>
 </ul>
 
 <h2>By the numbers</h2>
 <div class="scroll"><table>
 <tr><td>The app</td><td>One HTML file, no libraries: about 1,800 lines after the first day, about 2,100 after the second.</td></tr>
-<tr><td>Automated checks on the real Gemini Nano</td><td>210, in five suites, after the first day. 322, in nine suites, after the second, all passing at the time of writing.</td></tr>
+<tr><td>Automated checks on the real Gemini Nano</td><td>210, in five suites, after the first day. 322, in nine suites, after the second, all passing at the time of writing. After the Edge changes on the third day, the eight shorter suites (286 checks) were run again and all passed; the long-conversation test was not rerun.</td></tr>
+<tr><td>Checks in Microsoft Edge</td><td>15, on the real Aion Instruct in headless Edge 158, all passing.</td></tr>
 <tr><td>Checks with a real Claude key</td><td>12 in the final run. Three runs sent 12 requests in all, estimated from the token counts at 30 to 40 US cents.</td></tr>
 <tr><td>Checks of the Gemini Canvas copy</td><td>34, with a stand-in for Canvas, plus the trials in a real Canvas described above.</td></tr>
 <tr><td>Checks of the artifact copy</td><td>26, with a stand-in for the artifact viewer, plus the trials in Ken's Chrome described above.</td></tr>
 <tr><td>Parts with a switch</td><td>13 on the first day, plus one extra. A fourteenth, for pictures and sound, came the next day.</td></tr>
 <tr><td>Messages from Ken</td><td>About 70 over the two days. A third of them were sent while Claude was still working on the one before, and many began with something Ken had just tried.</td></tr>
-<tr><td>Time</td><td>Two days: one long session on November 22, and a second on November 23.</td></tr>
+<tr><td>Time</td><td>Two days: one long session on November 22, and a second on November 23. Edge was added on November 24.</td></tr>
 </table></div>
 
 <h2>Run it yourself</h2>

@@ -39,7 +39,7 @@ swap('document end', '</script>\n</body>\n</html>', '</script>');
 // ── the tab of its own, and the frame's helpers ──
 swap('page source', "<script>\n'use strict';\n", "<script>\n'use strict';\n" + pieces.source);
 before('storage fallback', "const settings = Object.assign({ provider: 'wikipedia'", pieces.storage);
-before('door in the frame', "  if (d.kind === 'none') return el('div', { class: 'door' }, el('h2', null, 'This page needs Chrome’s built-in AI'),",
+before('door in the frame', "  if (d.kind === 'none') return el('div', { class: 'door' }, el('h2', null, 'This page needs a browser’s built-in AI'),",
   "  if (d.kind === 'none' && !POPPED && SOURCE && artifactFramed()) return artifactDoor();\n");
 before('own tab', 'async function start(byClick) {', pieces.owntab);
 
@@ -55,12 +55,12 @@ swap('parts panel line', "el('small', null, F[p.k] ? p.on : p.off),", "el('small
 swap('parts panel probe', "          p.probe ? el('button', { class: 'try'", "          p.probe && !GONE[p.k] ? el('button', { class: 'try'");
 swap('second try choices', "el('div', { class: 'pgrid' }, FEATURES.map(p => el('label', { title: p.on }", "el('div', { class: 'pgrid' }, FEATURES.filter(p => !GONE[p.k]).map(p => el('label', { title: p.on }");
 swap('hints', 'const k = c.find(k => !(bot.variants', 'const k = c.find(k => !GONE[k] && !(bot.variants');
-swap('welcome example', "['Who designed the Eiffel Tower, and when was it finished?', 'Searches Wikipedia']", "['Write a limerick about a cat who learns to code', 'Nano on its own']");
+swap('welcome example', "['Who designed the Eiffel Tower, and when was it finished?', 'Searches Wikipedia']", "['Write a limerick about a cat who learns to code', (NANO + ' on its own')]");
 swap('welcome words', 'It can calculate, look things up, keep notes, read pages and long texts you give it, and look at pictures and listen to recordings.', 'It can calculate, keep notes, read long texts you give it, and look at pictures and listen to recordings.');
 swap('welcome words, text only', 'It can calculate, look things up, keep notes, and read pages and long texts you give it.', 'It can calculate, keep notes, and read long texts you give it.');
-cut('search settings', "    el('label', { style: 'margin-top:18px' }, 'Where searches go'),\n", "    el('label', { for: 'recallSel' }, 'How Nano looks back into a long conversation'),");
-before('note in place of the search settings', "    el('label', { for: 'recallSel' }, 'How Nano looks back into a long conversation'),",
-  "    el('p', { class: 'sub', style: 'margin-top:18px' }, 'This copy of Nano Chat runs as a Claude artifact, which may not reach other websites, so Nano cannot search the web or read links here. The full app does both: ', el('a', { href: 'https://toontalk.github.io/nano-chat/', target: '_blank', rel: 'noopener' }, 'toontalk.github.io/nano-chat'), '.'),\n");
+cut('search settings', "    el('label', { style: 'margin-top:18px' }, 'Where searches go'),\n", "    el('label', { for: 'recallSel' }, ('How ' + NANO + ' looks back into a long conversation')),");
+before('note in place of the search settings', "    el('label', { for: 'recallSel' }, ('How ' + NANO + ' looks back into a long conversation')),",
+  "    el('p', { class: 'sub', style: 'margin-top:18px' }, 'This copy of Nano Chat runs as a Claude artifact, which may not reach other websites, so ' + NANO + ' cannot search the web or read links here. The full app does both: ', el('a', { href: 'https://toontalk.github.io/nano-chat/', target: '_blank', rel: 'noopener' }, 'toontalk.github.io/nano-chat'), '.'),\n");
 cut('reader setting', "    el('label', { class: 'radio', style: 'margin-top:14px' }, el('input', { type: 'checkbox', checked: settings.reader,", '    voiceBox,\n');
 
 // ── the coach: Claude, on the viewer's account ──

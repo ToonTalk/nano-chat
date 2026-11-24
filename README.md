@@ -1,6 +1,7 @@
 # Nano Chat
 
-A chatbot that runs entirely on **Gemini Nano**, the small language model built into Chrome.
+A chatbot that runs entirely on **Gemini Nano**, the small language model built into Chrome,
+or on **Aion Instruct**, Microsoft's small model in Edge.
 No account, no API key, and no other language model. Your conversations stay in your browser.
 
 **Try it:** https://toontalk.github.io/nano-chat/
@@ -21,6 +22,21 @@ No account, no API key, and no other language model. Your conversations stay in 
 - The first visit downloads the model (a few gigabytes), once for all sites.
 
 Phones and tablets are not supported by Chrome's built-in model yet.
+
+### Or Microsoft Edge
+
+Edge offers the same Prompt API, running Microsoft's own model, Aion Instruct (2.3 billion
+parameters, a download of about 1.2 GB). In Edge 158 it is still switched off by default:
+
+- Open `edge://flags`, find "Prompt API", set it to Enabled, and restart Edge.
+- Edge runs it on Windows 10 or 11, on macOS 13.3 or newer, and from Edge 159 on Linux, with
+  about 20 GB of free disk space and a graphics card with 3 GB of memory. Not on phones.
+
+Everything works there except pictures and sound: Edge 158 gives its model text only. The page
+asks the model each time it starts, so if a later Edge adds them they will work without a
+change. In Edge the page calls the model Aion instead of Nano. Its memory is a little smaller
+(7,168 tokens to Nano's 9,216), and the memory parts scale to it. Tried on 24 November 2026 in
+Edge 158 on Windows: answers came in one to two seconds.
 
 ## Working around a small model
 
@@ -207,6 +223,10 @@ calculator. Open the tool chips and the sources to check what an answer rests on
   - `node tools/test-extras.mjs`: SVG pictures, saving a chat, and voice. Headless Chrome
     has no microphone or loudspeaker, so Chrome's speech recognition and speech output are
     replaced by stand-ins.
+  - `node tools/test-edge.mjs`: the page in Microsoft Edge with Aion Instruct: its names,
+    pictures refused, a few answers, and the start screen in an Edge without the Prompt API
+    flag. It runs headless Edge on throwaway profiles; the one with the flag on is kept in the
+    temp folder so the model downloads only once.
 
 ## Experiments with other models
 
