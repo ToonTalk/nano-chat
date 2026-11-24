@@ -270,6 +270,12 @@ reviewed an answer with no key. The coach
 there needs the browser to be signed in to Google: in an incognito window Gemini refuses its
 requests. It has not been tried from a second Google account.
 
+In Microsoft Edge the shared copy opens its own tab and runs Aion Instruct there, but the coach
+with no key does not work: on 24 November 2026, signed in to Google and with tracking prevention
+off, every request got "403: Permission denied on the service", the same answer a page outside
+Canvas gets. Canvas does not seem to pass these requests on to the viewer's account in Edge. The
+page now says so; in Edge, choose another coach and give it a key.
+
 To make your own: ask Gemini for any small HTML page in a Canvas, switch the Canvas to Code,
 replace the code with the file's contents, switch back to Preview, and choose "Open Nano
 Chat in its own tab". The 🧪 Frame check button reports what the frame allows. None of this

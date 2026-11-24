@@ -69,10 +69,15 @@ async function canvasAsk(system, msgs, { web = false, json = true, signal } = {}
     catch (e) { if (e.name === 'AbortError') throw e; last = e; if (e.kind === 'network' || e.kind === 'timeout') break; }
   }
   if (last.kind !== 'key') throw last;
-  // The same refusal has two causes, and the reader can only act on the right one.
-  throw new Error(inCanvas()
-    ? 'Gemini refused the request. Inside Gemini Canvas that usually means this browser is not signed in to Google, as in a private or incognito window. Sign in to Google, reload the Gemini page, and open Nano Chat from it again'
-    : 'Gemini did not take a request without a key. This coach works only when Nano Chat is opened from Gemini Canvas. Here, choose another coach in Settings and give it a key');
+  // The same refusal has several causes, and the reader can only act on the right one. Gemini's own words go with it.
+  // In Edge, on 24 November 2026, every model got 403 "Permission denied on the service" inside Canvas, signed in to
+  // Google and with tracking prevention off, while the same link worked in Chrome. A page outside Canvas gets the same
+  // answer, so in Edge Canvas seems not to pass the request on to the viewer's account at all.
+  const said = ' (' + String(last.message || '').replace(/^the service answered (\d+) \((.*)\)$/, '$1: $2').replace(/^the service answered /, '') + ')';
+  throw new Error(!inCanvas()
+    ? 'Gemini did not take a request without a key' + said + '. This coach works only when Nano Chat is opened from Gemini Canvas. Here, choose another coach in Settings and give it a key'
+    : EDGE ? 'Gemini refused the request' + said + '. In Microsoft Edge, Gemini Canvas does not pass these requests on to your Google account, even when you are signed in, so this coach with no key works only in Chrome. Open the Gemini link in Chrome, or choose another coach in Settings and give it a key'
+    : 'Gemini refused the request' + said + '. Inside Gemini Canvas that usually means this browser is not signed in to Google, as in a private or incognito window. Sign in to Google, reload the Gemini page, and open Nano Chat from it again');
 }
 // Inside Canvas's frame, or in the tab that frame opened.
 function inCanvas() { if (POPPED) return true; try { return self !== top; } catch { return true; } }
@@ -96,10 +101,10 @@ function openOwnTab() {
 }
 function canvasDoor() {
   let framed = false; try { framed = self !== top; } catch { framed = true; }
-  const says = { open: 'Opened. Nano is starting in the new tab…', ready: 'Nano Chat is running in the other tab. Keep this tab open: the coach’s requests go through it.', download: 'The other tab is waiting for you to start the model’s download.', nonano: 'The new tab opened, but Chrome’s built-in model is not available there either.',
+  const says = { open: 'Opened. Nano is starting in the new tab…', ready: 'Nano Chat is running in the other tab. Keep this tab open: the coach’s requests go through it.', download: 'The other tab is waiting for you to start the model’s download.', nonano: 'The new tab opened, but ' + BROWSER + '’s built-in model is not available there either.',
     blocked: 'The browser did not let a new tab open. Allow pop-ups for this page and try again.', failed: 'The new tab could not be filled: ' + own.why, closed: 'The other tab was closed.', lost: 'The other tab can no longer be reached from here.' };
   return [framed && !POPPED && SOURCE
-    ? [el('p', null, 'This is the test copy for Gemini Canvas. Canvas does not let the frame its apps run in use Chrome’s built-in model, but a tab of its own can.'), el('button', { class: 'big', id: 'ownTab', onclick: openOwnTab }, 'Open Nano Chat in its own tab'), own.state ? el('p', { class: 'count', id: 'ownState' }, says[own.state]) : null]
+    ? [el('p', null, 'This is the test copy for Gemini Canvas. Canvas does not let the frame its apps run in use ' + BROWSER + '’s built-in model, but a tab of its own can.'), el('button', { class: 'big', id: 'ownTab', onclick: openOwnTab }, 'Open Nano Chat in its own tab'), own.state ? el('p', { class: 'count', id: 'ownState' }, says[own.state]) : null]
     : el('p', null, 'This is the test copy for Gemini Canvas.' + (POPPED ? ' It is already in a tab of its own.' : '')),
     el('p', null, el('button', { class: 'plain', onclick: () => frameCheck() }, 'Check what this frame allows'))];
 }
@@ -117,27 +122,27 @@ async function frameCheck() {
   const why = e => String(e && e.message || e).slice(0, 200);
   const copied = el('span', { class: 'sub', style: 'margin-left:10px' });
   const copy = el('button', { class: 'plain', onclick: () => { out.focus(); out.select(); let ok = false; try { ok = document.execCommand('copy'); } catch {} copied.textContent = ok ? 'Copied.' : 'Could not copy here. The text is selected: press Ctrl+C.'; } }, 'Copy the report');
-  dialog('Frame check', el('p', { class: 'sub' }, 'This test copy checks what the frame it is running in allows: Chrome’s Gemini Nano, a request to Gemini with no key, storage, and the web.'), status, list, out, el('div', { style: 'margin-top:8px' }, copy, copied));
+  dialog('Frame check', el('p', { class: 'sub' }, 'This test copy checks what the frame it is running in allows: ' + BROWSER + '’s ' + MODEL + ', a request to Gemini with no key, storage, and the web.'), status, list, out, el('div', { style: 'margin-top:8px' }, copy, copied));
 
   // where the page is
   let framed = false; try { framed = self !== top; } catch { framed = true; }
   const above = []; try { for (const o of location.ancestorOrigins || []) above.push(o); } catch {}
-  const chrome = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1];
-  say('Where this page is running', null, `${self.origin === 'null' ? 'an origin of its own with no name (sandboxed)' : self.origin}; ${POPPED ? 'in a tab of its own, opened by the Canvas page' : framed ? 'inside a frame' + (above.length ? ' of ' + above.join(' › ') : '') : 'not in a frame'}; ${chrome ? 'Chrome ' + chrome : 'not Chrome'}`);
+  const chrome = (navigator.userAgent.match(EDGE ? /Edg\/(\d+)/ : /Chrome\/(\d+)/) || [])[1];
+  say('Where this page is running', null, `${self.origin === 'null' ? 'an origin of its own with no name (sandboxed)' : self.origin}; ${POPPED ? 'in a tab of its own, opened by the Canvas page' : framed ? 'inside a frame' + (above.length ? ' of ' + above.join(' › ') : '') : 'not in a frame'}; ${chrome ? BROWSER + ' ' + chrome : 'not Chrome or Edge'}`);
 
   // what the frame is allowed
   const pol = document.permissionsPolicy || document.featurePolicy, allows = f => { try { return pol ? pol.allowsFeature(f) : null; } catch { return null; } };
   const lmAllowed = allows('language-model');
-  say('The frame is allowed to use Chrome’s built-in model', lmAllowed, lmAllowed == null ? 'this browser does not say' : 'permissions policy “language-model” is ' + lmAllowed);
+  say('The frame is allowed to use ' + BROWSER + '’s built-in model', lmAllowed, lmAllowed == null ? 'this browser does not say' : 'permissions policy “language-model” is ' + lmAllowed);
 
   // Gemini Nano
-  if (!LM) say('Gemini Nano', false, 'there is no LanguageModel in this page');
-  else if (engine.ready) say('Gemini Nano', true, `running in this page; its memory is ${engine.W} tokens`);
+  if (!LM) say(MODEL, false, 'there is no LanguageModel in this page');
+  else if (engine.ready) say(MODEL, true, `running in this page; its memory is ${engine.W} tokens`);
   else {
     try {
       const a = await within(LM.availability(LM_OPTS), 10000);
-      say('Gemini Nano', a === 'available' ? true : a === 'unavailable' ? false : null, `Chrome says “${a}”` + (a === 'available' ? ', but it has not started in this page' + (state.door && state.door.why ? ' (' + state.door.why + ')' : '') : ''));
-    } catch (e) { say('Gemini Nano', false, why(e)); }
+      say(MODEL, a === 'available' ? true : a === 'unavailable' ? false : null, `${BROWSER} says “${a}”` + (a === 'available' ? ', but it has not started in this page' + (state.door && state.door.why ? ' (' + state.door.why + ')' : '') : ''));
+    } catch (e) { say(MODEL, false, why(e)); }
   }
 
   // Gemini with no key
@@ -174,8 +179,8 @@ async function frameCheck() {
   say('Reading aloud', canSpeak ? null : false, canSpeak ? `${speechSynthesis.getVoices().length} voices listed; try “Read aloud” under a reply` : 'no speech output here');
   say('Saving a chat as a file', null, 'cannot be checked without a click: try the Save button on a chat');
 
-  const nano = rows.find(r => r.name === 'Gemini Nano');
-  rows.push({ name: 'In short', ok: null, detail: `Nano ${nano && nano.ok === true ? 'works' : nano && nano.ok === false ? 'does not work' : 'is undecided'} in this frame; Gemini with no key ${works ? 'works (' + works + ')' : 'does not work'}.${!works && refused && inCanvas() ? ' Gemini refuses these requests when the browser is not signed in to Google, as in a private or incognito window.' : !works && refused ? ' That is expected outside Gemini Canvas.' : ''}` });
+  const nano = rows.find(r => r.name === MODEL);
+  rows.push({ name: 'In short', ok: null, detail: `${NANO} ${nano && nano.ok === true ? 'works' : nano && nano.ok === false ? 'does not work' : 'is undecided'} in this frame; Gemini with no key ${works ? 'works (' + works + ')' : 'does not work'}.${!works && refused && inCanvas() ? (EDGE ? ' In Edge, Gemini Canvas does not pass these requests on to your Google account, even when signed in; in Chrome it does.' : ' Gemini refuses these requests when the browser is not signed in to Google, as in a private or incognito window.') : !works && refused ? ' That is expected outside Gemini Canvas.' : ''}` });
   draw(); status.textContent = 'Done. Copy the report and send it back.';
   if (works && !state.busy) ui.thread();
   return text();
