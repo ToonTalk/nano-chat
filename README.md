@@ -298,7 +298,9 @@ the artifact viewer. Publish it as an artifact with the capabilities `sample` (w
 Claude's rules for artifacts say that such a tab opens only for some viewers: those signed in
 to Claude in the same organization as the artifact's owner. Tried on 23 November 2026 by its
 owner in Chrome 157, Nano ran in the tab, read the writing in a picture, and the artifact
-offered to save a chat. It has not been tried from another account. [How it was
+offered to save a chat. It has not been tried from another account. Each browser keeps its
+own sign-ins: a browser that is not signed in to claude.ai gets no tab and no Claude, and
+after signing in the page must be reloaded with the browser's reload button. [How it was
 made](https://toontalk.github.io/nano-chat/making-of.html#artifact-tab) has the details.
 
 ## License
