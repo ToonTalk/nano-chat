@@ -371,7 +371,7 @@ const MORE = {
 // ── Artifact copy ── An artifact may not reach other sites, and the tab it opens inherits that rule. So the two parts
 // that fetch from the web are shown, but cannot be switched on.
 const GONE = {
-  search: 'Not in this copy. A Claude artifact may not reach other websites, so Nano cannot search the web here.',
+  search: 'Not in this copy. A Claude artifact may not reach other websites, so ' + NANO + ' cannot search the web here.',
   links: 'Not in this copy. A Claude artifact may not reach other websites, so links cannot be fetched here.',
 };
 const PART = Object.fromEntries(FEATURES.map(f => [f.k, f])), CORE = FEATURES.filter(f => !f.extra && !GONE[f.k]);
@@ -2182,20 +2182,22 @@ async function readPermission(ask) {
 }
 function artifactDoor() {
   const site = el('a', { href: 'https://toontalk.github.io/nano-chat/', target: '_blank', rel: 'noopener' }, 'toontalk.github.io/nano-chat');
-  const says = { open: 'Opened. Nano is starting in the new tab…', ready: 'Nano Chat is running in the other tab. Keep this tab open: the coach’s requests to Claude go through it.', download: 'The other tab is waiting for you to start the model’s download.',
-    nonano: 'The new tab opened, but Chrome’s built-in model is not available there either. This computer or browser may not run it.', failed: 'The new tab could not be filled: ' + own.why, closed: 'The other tab was closed.', lost: 'The other tab can no longer be reached from here.' };
+  const says = { open: 'Opened. ' + NANO + ' is starting in the new tab…', ready: 'Nano Chat is running in the other tab. Keep this tab open: the coach’s requests to Claude go through it.', download: 'The other tab is waiting for you to start the model’s download.',
+    nonano: 'The new tab opened, but ' + BROWSER + '’s built-in model is not available there either.' + (EDGE ? ' In Edge it has to be switched on first: open edge://flags, find “Prompt API”, set it to Enabled, and restart Edge.' : ' This computer or browser may not run it.'), failed: 'The new tab could not be filled: ' + own.why, closed: 'The other tab was closed.', lost: 'The other tab can no longer be reached from here.' };
   if (own.permission === '') { own.permission = '…'; readPermission(false); }
   const coach = { granted: 'Claude is allowed. Each review counts toward your Claude usage limits.', prompt: 'Claude asks your permission the first time. You can give it now, so that the first review does not wait on it.',
     denied: 'Claude is not allowed for this artifact. You can change that in the artifact’s Permissions menu.', unavailable: 'Claude is not offered to this artifact for you, so the coach will not work.', '…': '' }[own.permission] || '';
   return el('div', { class: 'door' }, el('h2', null, 'Nano Chat opens in a tab of its own'),
-    el('p', null, 'Nano Chat talks to Gemini Nano, the small model built into Chrome. Chrome does not let a Claude artifact’s frame use that model, but a tab the artifact opens may.'),
+    el('p', null, EDGE ? 'Nano Chat talks to the small model a browser runs on your own computer, here Aion Instruct, Microsoft’s model in Edge. (In Chrome it is Gemini Nano.) A Claude artifact’s frame may not use that model, but a tab the artifact opens may.'
+      : 'Nano Chat talks to the small model a browser runs on your own computer, here Gemini Nano, the model built into Chrome. (In Microsoft Edge it is Aion Instruct.) Chrome does not let a Claude artifact’s frame use that model, but a tab the artifact opens may.'),
     el('button', { class: 'big', id: 'ownTab', onclick: openOwnTab }, 'Open Nano Chat in its own tab'),
-    own.state === 'blocked' ? el('p', { class: 'count', id: 'ownState' }, 'This artifact was not allowed to open a tab. Claude lets an artifact do that only for some viewers, who are signed in to Claude in the same organization as the artifact’s owner. The full app, which needs no artifact, is at ', site, '.')
+    own.state === 'blocked' ? el('p', { class: 'count', id: 'ownState' }, 'This artifact was not allowed to open a tab. Claude lets an artifact do that only for some viewers, who are signed in to Claude in the same organization as the artifact’s owner. Each browser keeps its own sign-ins, so check that this one is signed in to Claude. The full app, which needs no artifact, is at ', site, '.')
       : own.state ? el('p', { class: 'count', id: 'ownState' }, says[own.state]) : null,
     el('p', null, el('b', null, 'The coach'), ' is Claude, on your own Claude account, so it needs no key. ', el('span', { id: 'coachPermission' }, coach), ' ',
       own.permission === 'prompt' ? el('button', { class: 'plain', id: 'allowCoach', onclick: () => readPermission(true) }, 'Let the coach use Claude') : null),
     el('p', { class: 'count' }, 'What this copy cannot do: search the web or read links, because a Claude artifact may not reach other websites. Your chats and notes are kept in this browser. The full app is at ', site.cloneNode(true), '.'),
-    el('ul', null, el('li', null, 'It needs Chrome 148 or newer on a Windows, Mac or Linux computer, or a Chromebook Plus.'), el('li', null, 'The computer needs about 22 GB of free disk space, and either a graphics card with more than 4 GB of memory or 16 GB of RAM.')));
+    EDGE ? el('ul', null, el('li', null, 'In Edge it needs version 158 or newer with its “Prompt API” setting switched on in edge://flags, on Windows 10 or 11, macOS 13.3 or newer, or (from Edge 159) Linux.'), el('li', null, 'The computer needs about 20 GB of free disk space and a graphics card with 3 GB of memory. Pictures and sound are not offered in Edge yet.'))
+      : el('ul', null, el('li', null, 'It needs Chrome 148 or newer on a Windows, Mac or Linux computer, or a Chromebook Plus, or Microsoft Edge 158 or newer with its “Prompt API” setting switched on.'), el('li', null, 'The computer needs about 22 GB of free disk space, and either a graphics card with more than 4 GB of memory or 16 GB of RAM.')));
 }
 async function start(byClick) {
   try {
